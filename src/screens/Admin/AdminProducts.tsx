@@ -268,6 +268,22 @@ export default function AdminProducts() {
 
   const filtered = search ? products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase())) : products;
 
+  const syncOldProducts = async () => {
+    try {
+      Alert.alert('Syncing...', 'Please wait.');
+      let count = 0;
+      for (const p of products) {
+        if (!p.status || p.status !== 'approved' && p.status !== 'pending' && p.status !== 'rejected') {
+          await updateDoc(doc(db, 'products', p.id), { status: 'approved' });
+          count++;
+        }
+      }
+      Alert.alert('Done!', `Updated ${count} old products. They will now show on Customer panel.`);
+    } catch(e:any) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
   return (
     <View style={s.root}>
       <View style={s.header}>
@@ -276,6 +292,11 @@ export default function AdminProducts() {
           <Text style={[font, s.hSub]}>{showForm ? 'Fill product details' : `${products.length} total`}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {!showForm && (
+            <TouchableOpacity style={[s.addBtn, {backgroundColor: '#10B981'}]} onPress={syncOldProducts}>
+              <Text style={[font, { color: '#FFF', fontWeight: 'bold', fontSize: 13 }]}>Fix Old Products</Text>
+            </TouchableOpacity>
+          )}
           {!showForm && isSelectMode && selectedIds.length > 0 && (
             <TouchableOpacity style={s.bulkDelBtn} onPress={handleBulkDelete}>
               <Trash2 color="#FFF" size={16} />
