@@ -253,6 +253,19 @@ export default function AdminProducts() {
     await updateDoc(doc(db, 'products', id), { isFeatured: !curr });
   };
 
+  const handleApprove = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'products', id), { status: 'approved' });
+      if (Platform.OS === 'web') {
+         window.alert('✅ Product Approved!');
+      } else {
+         Alert.alert('Success', '✅ Product Approved!');
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  };
+
   const filtered = search ? products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase())) : products;
 
   return (
@@ -474,12 +487,23 @@ export default function AdminProducts() {
                   )}
                   <View style={s.info}>
                     <Text style={[font, s.pName]} numberOfLines={1}>{p.name}</Text>
+                    {p.status === 'pending' && (
+                      <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginBottom: 4 }}>
+                        <Text style={[font, { fontSize: 10, color: '#D97706', fontWeight: 'bold' }]}>PENDING APPROVAL</Text>
+                      </View>
+                    )}
                     <Text style={[font, s.pCat]}>{p.categoryName || 'No Cat'}{p.variants?.length ? ` • ${p.variants.length} variants` : ''}{p.images?.length > 1 ? ` • ${p.images.length} imgs` : ''}</Text>
                     <Text style={[font, s.pPrice]}>₹{p.discountPrice || p.price} <Text style={{ color: '#9CA3AF', textDecorationLine: p.discountPrice ? 'line-through' : 'none', fontSize: 11 }}>{p.discountPrice ? `₹${p.price}` : ''}</Text> • Stock: <Text style={{ color: p.stock > 0 ? '#10B981' : '#EF4444' }}>{p.stock}</Text>{p.unit ? ` ${p.unit}` : ''}</Text>
                   </View>
                 </TouchableOpacity>
 
                 <View style={s.actionsRow}>
+                  {p.status === 'pending' && (
+                    <TouchableOpacity style={[s.iconBtn, { backgroundColor: '#D1FAE5' }]} onPress={() => handleApprove(p.id)}>
+                      <CheckCircle color="#10B981" size={16} />
+                      <Text style={[font, { fontSize: 13, color: '#10B981', fontWeight: '800' }]}>Approve</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity style={s.iconBtn} onPress={() => toggleFeature(p.id, !!p.isFeatured)}>
                     <Star color={p.isFeatured ? '#F59E0B' : '#9CA3AF'} fill={p.isFeatured ? '#F59E0B' : 'transparent'} size={16} />
                   </TouchableOpacity>
