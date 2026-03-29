@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Agrimore",
+    "slug": "agrimore2",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "newArchEnabled": false,
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#145A32"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyCKL5RYJ39x93yz1Km59KwpYybRod3IOeg"
+      }
+    },
+    "android": {
+      "package": "com.agrimore.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#145A32",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCKL5RYJ39x93yz1Km59KwpYybRod3IOeg"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5bba1f77-83b8-4055-98af-be763d8d4310"
+      }
+    },
+    "owner": "eswaran22"
+  }
+}

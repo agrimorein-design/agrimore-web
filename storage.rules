@@ -1,0 +1,56 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Role check requires referencing firestore auth natively or custom claims.
+    // If you are using custom claims for admin:
+    // return request.auth.token.role == 'admin';
+    // Otherwise, we allow admins to upload to /admin/ and /products/ folders.
+    
+    // Allow public read on all product/banner/category images
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+
+    // 1️⃣ Users can read/write their own profile pictures and attachments
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 1.5️⃣ Sellers can upload their product images
+    match /seller-products/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 2️⃣ Admins can upload Product Images
+    match /products/{imageId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // Restrict further based on your admin auth tokens if needed
+    }
+
+    // 3️⃣ Admins can upload Banners
+    match /banners/{imageId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); 
+    }
+
+    // 4️⃣ Admins can upload Category icons
+    match /categories/{imageId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // 5️⃣ Chat / Invoices / Secure items shouldn't be fully public
+    match /invoices/{orderId}/{fileName} {
+      allow read: if isAuthenticated(); // Only logged-in users
+      allow write: if isAuthenticated(); // Assuming admins generate/save these
+    }
+  }
+}
