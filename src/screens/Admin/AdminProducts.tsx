@@ -159,6 +159,7 @@ export default function AdminProducts() {
         description,
         images,
         variants: parsedVariants,
+        status: 'approved',
         updatedAt: new Date()
       };
       if (editId) {
