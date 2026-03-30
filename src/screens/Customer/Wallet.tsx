@@ -20,6 +20,10 @@ export default function WalletScreen({ navigation }: any) {
   const [addAmount, setAddAmount] = useState('');
   const [processing, setProcessing] = useState(false);
 
+  const [totalInvestment, setTotalInvestment] = useState(0);
+  const [dailyEarnings, setDailyEarnings] = useState(0);
+  const [totalProfit, setTotalProfit] = useState(0);
+
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({
     name: userData?.name || '', phone: userData?.phone || '', bankName: '', accountNo: '', ifsc: '', amount: ''
@@ -42,43 +46,69 @@ export default function WalletScreen({ navigation }: any) {
         txList.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setTransactions(txList);
 
-        // --- AUTOMATIC INTEREST LAZY EVALUATION --- //
-        // 12% yearly return on matured deposits (1 year old)
+        // --- DAILY INTEREST LAZY EVALUATION --- //
+        // 12% yearly return = ~0.0328% daily return
         const depQ = query(collection(db, 'deposits'), where('userId', '==', userData.uid), where('status', '==', 'success'));
         const depSnap = await getDocs(depQ);
         
+        let totalInv = 0;
         let pendingInterest = 0;
         const nowMs = Date.now();
-        const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-        const batchUpdates = [];
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        const batchUpdates: any[] = [];
         
         depSnap.forEach(dDoc => {
           const depData = dDoc.data();
-          if (!depData.interestClaimed) {
-            const depMs = depData.createdAt?.toDate ? depData.createdAt.toDate().getTime() : 0;
-            if (depMs > 0 && (nowMs - depMs) >= ONE_YEAR_MS) {
-              const interest = (depData.amount * 12) / 100;
-              pendingInterest += interest;
-              batchUpdates.push({ ref: doc(db, 'deposits', dDoc.id), data: { interestClaimed: true, interestGrantedAt: new Date() } });
-            }
+          totalInv += (depData.amount || 0);
+
+          // Use lastCalculatedAt, fallback to createdAt or current time if missing
+          const lastCalcTs = depData.lastCalculatedAt?.toDate ? depData.lastCalculatedAt.toDate().getTime() : 
+                             (depData.createdAt?.toDate ? depData.createdAt.toDate().getTime() : nowMs);
+                             
+          let daysPassed = Math.floor((nowMs - lastCalcTs) / ONE_DAY_MS);
+          
+          if (daysPassed > 0) {
+            const dailyInterestAmt = (depData.amount * 12) / 100 / 365;
+            const interest = daysPassed * dailyInterestAmt;
+            pendingInterest += interest;
+            
+            // Update lastCalculatedAt by exactly the days matched
+            const newCalcTs = lastCalcTs + (daysPassed * ONE_DAY_MS);
+            batchUpdates.push({ 
+              ref: doc(db, 'deposits', dDoc.id), 
+              data: { lastCalculatedAt: new Date(newCalcTs) } 
+            });
           }
         });
 
+        // Compute daily earnings estimate based on 12% yearly
+        const dailyEarningsEst = (totalInv * 12) / 100 / 365;
+        setTotalInvestment(totalInv);
+        setDailyEarnings(dailyEarningsEst);
+
+        let currentProfit = userDoc.data()?.totalProfit || 0;
+
         if (pendingInterest > 0) {
-          // Grant Interest automatically!
           const newBal = (userDoc.data()?.walletBalance || 0) + pendingInterest;
-          await updateDoc(doc(db, 'users', userData.uid), { walletBalance: newBal });
+          currentProfit += pendingInterest;
+
+          await updateDoc(doc(db, 'users', userData.uid), { 
+            walletBalance: newBal,
+            totalProfit: currentProfit
+          });
           
           for (const up of batchUpdates) {
              await updateDoc(up.ref, up.data);
           }
 
-          const intTx = { type: 'credit', title: '12% Annual Interest 🚀', amount: pendingInterest, status: 'success', createdAt: new Date() };
+          const intTx = { type: 'credit', title: 'Daily Investment Profit 📈', amount: pendingInterest, status: 'success', createdAt: new Date() };
           await addDoc(collection(db, 'users', userData.uid, 'transactions'), intTx);
           
           setBalance(newBal);
           setTransactions(prev => [{ id: Date.now().toString(), ...intTx }, ...prev]);
         }
+        
+        setTotalProfit(currentProfit);
 
       } catch (e) {
         console.error('Error fetching wallet:', e);
@@ -117,8 +147,9 @@ export default function WalletScreen({ navigation }: any) {
       const newBalance = balance + amt;
       await updateDoc(doc(db, 'users', userData.uid), { walletBalance: newBalance });
 
+      // When money is added to wallet, it's counted as an investment from this moment
       await addDoc(collection(db, 'deposits'), {
-        userId: userData.uid, userName: userData.name || '', amount: amt, status: 'success', method: 'razorpay', paymentId: paymentResult.paymentId, createdAt: new Date()
+        userId: userData.uid, userName: userData.name || '', amount: amt, status: 'success', method: 'razorpay', paymentId: paymentResult.paymentId, createdAt: new Date(), lastCalculatedAt: new Date()
       });
 
       const txDoc = {
@@ -172,6 +203,25 @@ export default function WalletScreen({ navigation }: any) {
         status: 'pending',
         createdAt: new Date()
       });
+
+      // Deduct from deposits to reduce interest-earning base
+      let remainingWithdraw = amt;
+      const wDepQ = query(collection(db, 'deposits'), where('userId', '==', userData.uid), where('status', '==', 'success'));
+      const wDepSnap = await getDocs(wDepQ);
+      const wDepDocs: any[] = wDepSnap.docs.map(d => ({id: d.id, ...d.data()})).sort((a: any, b: any) => {
+        const aTs = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+        const bTs = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+        return aTs - bTs;
+      });
+      
+      for (const d of wDepDocs) {
+        if (remainingWithdraw <= 0) break;
+        if (d.amount > 0) {
+          const deduct = Math.min(d.amount, remainingWithdraw);
+          await updateDoc(doc(db, 'deposits', d.id), { amount: d.amount - deduct });
+          remainingWithdraw -= deduct;
+        }
+      }
 
       await updateDoc(doc(db, 'users', userData.uid), { walletBalance: newBalance });
       
@@ -230,9 +280,27 @@ export default function WalletScreen({ navigation }: any) {
           <Text style={[font, s.balanceAmount]}>₹{balance.toFixed(2)}</Text>
         </View>
 
+        {/* Investment Dashboard Panel */}
+        <View style={s.dashboardPanel}>
+          <View style={s.dashCol}>
+            <Text style={[font, s.dashLabel]}>Total Investment</Text>
+            <Text style={[font, s.dashValue]}>₹{totalInvestment.toFixed(2)}</Text>
+          </View>
+          <View style={s.dashDivider} />
+          <View style={s.dashCol}>
+            <Text style={[font, s.dashLabel]}>Est. Daily Returns</Text>
+            <Text style={[font, s.dashValue, { color: '#16A34A' }]}>+₹{dailyEarnings.toFixed(2)}</Text>
+          </View>
+          <View style={s.dashDivider} />
+          <View style={s.dashCol}>
+            <Text style={[font, s.dashLabel]}>Total Profit</Text>
+            <Text style={[font, s.dashValue, { color: '#7C3AED' }]}>₹{totalProfit.toFixed(2)}</Text>
+          </View>
+        </View>
+
         {/* 12% Interest Banner */}
         <View style={s.interestBanner}>
-          <Text style={[font, s.interestText]}>💰 Earn 12% Yearly Interest on your balance!</Text>
+          <Text style={[font, s.interestText]}>💰 Earn 12% Yearly Interest (Calculated Daily)</Text>
         </View>
 
         {/* Action Buttons */}
@@ -379,6 +447,11 @@ const s = StyleSheet.create({
   balanceAmount: { color: '#FFF', fontSize: 40, fontWeight: '900', marginTop: 4 },
   interestBanner: { backgroundColor: 'rgba(212,168,67,0.15)', borderWidth: 1, borderColor: 'rgba(212,168,67,0.4)', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginHorizontal: 20, marginBottom: 20, alignItems: 'center' },
   interestText: { color: '#D4A843', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
+  dashboardPanel: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 16, marginHorizontal: 20, paddingVertical: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
+  dashCol: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  dashLabel: { color: '#6B7280', fontSize: 11, marginBottom: 4 },
+  dashValue: { color: '#1F2937', fontSize: 16, fontWeight: '900' },
+  dashDivider: { width: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
   actionRow: { flexDirection: 'row', justifyContent: 'center' },
   actionBtn: { alignItems: 'center', marginHorizontal: 20 },
   actionIcon: {
