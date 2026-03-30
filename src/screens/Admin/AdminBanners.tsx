@@ -19,15 +19,17 @@ export default function AdminBanners() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [bannerType, setBannerType] = useState<'desktop' | 'mobile'>('desktop');
 
   const openForm = (b: any = null) => {
     if (b) {
       setEditId(b.id);
       setTitle(b.title || '');
       setImageUrl(b.imageUrl || '');
+      setBannerType(b.bannerType || 'desktop');
     } else {
       setEditId(null);
-      setTitle(''); setImageUrl('');
+      setTitle(''); setImageUrl(''); setBannerType('desktop');
     }
     setAdding(true);
   };
@@ -39,10 +41,19 @@ export default function AdminBanners() {
       
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true, quality: 0.8,
+        quality: 1,
       });
 
       if (!result.canceled && result.assets?.[0]?.uri) {
+        const asset = result.assets[0];
+        const reqW = bannerType === 'desktop' ? 1200 : 800;
+        const reqH = 400;
+
+        if (asset.width !== reqW || asset.height !== reqH) {
+          Alert.alert('Invalid Size', `Please upload banner in ${reqW} × ${reqH} px size only. Selected image is ${asset.width} × ${asset.height} px.`);
+          return;
+        }
+
         setUploadingImg(true);
         const imgUri = result.assets[0].uri;
         const blob: any = await new Promise((resolve, reject) => {
@@ -79,9 +90,9 @@ export default function AdminBanners() {
     setSaving(true);
     try {
       if (editId) {
-        await updateDoc(doc(db, 'banners', editId), { title, imageUrl, updatedAt: new Date() });
+        await updateDoc(doc(db, 'banners', editId), { title, imageUrl, bannerType, updatedAt: new Date() });
       } else {
-        await addDoc(collection(db, 'banners'), { title, imageUrl, isActive: true, createdAt: new Date() });
+        await addDoc(collection(db, 'banners'), { title, imageUrl, bannerType, isActive: true, createdAt: new Date() });
       }
       setTitle(''); setImageUrl(''); setAdding(false);
     } catch (e: any) { Alert.alert('Error', e.message); }
@@ -204,6 +215,17 @@ export default function AdminBanners() {
               <Text style={[font,{fontSize:18,fontWeight:'800',color:'#111827'}]}>{editId ? 'Edit Banner' : 'New Banner'}</Text>
               <TouchableOpacity onPress={() => setAdding(false)}><X color="#6B7280" size={22} /></TouchableOpacity>
             </View>
+
+            <Text style={[font,s.label, {marginTop: 0}]}>Banner Target Device</Text>
+            <View style={{flexDirection: 'row', gap: 10, marginBottom: 10}}>
+              <TouchableOpacity style={[s.typeBtn, bannerType === 'desktop' && s.typeBtnAct]} onPress={() => setBannerType('desktop')}>
+                <Text style={{color: bannerType === 'desktop' ? '#FFF' : '#374151', fontWeight:'bold', fontSize: 13}}>Desktop (1200x400)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.typeBtn, bannerType === 'mobile' && s.typeBtnAct]} onPress={() => setBannerType('mobile')}>
+                <Text style={{color: bannerType === 'mobile' ? '#FFF' : '#374151', fontWeight:'bold', fontSize: 13}}>Mobile (800x400)</Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={[font,s.label]}>Title (Optional)</Text>
             <TextInput style={[font,s.input]} value={title} onChangeText={setTitle} placeholder="Banner title..." />
             <Text style={[font,s.label]}>Image URL or Direct Upload</Text>
@@ -248,7 +270,10 @@ export default function AdminBanners() {
                   </View>
                 )}
                 <View style={s.cardBottom}>
-                  <Text style={[font,s.bTitle]} numberOfLines={1}>{b.title || 'Untitled Banner'}</Text>
+                  <View style={{flex: 1}}>
+                    <Text style={[font,s.bTitle]} numberOfLines={1}>{b.title || 'Untitled Banner'}</Text>
+                    <Text style={[font,{fontSize:11,color:'#9CA3AF',textTransform:'capitalize',fontWeight:'bold',marginTop:2}]}>{b.bannerType || 'Desktop'}</Text>
+                  </View>
                 </View>
               </TouchableOpacity>
               
@@ -293,4 +318,6 @@ const s = StyleSheet.create({
   selAllBtn: { flexDirection: 'row', alignItems: 'center' },
   floatCheck: { position: 'absolute', top: 12, left: 12, zIndex: 10, shadowColor:'#000', shadowOffset: {width:0, height:2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
   actionsRow: { flexDirection: 'row', alignItems: 'center' },
+  typeBtn: { flex: 1, paddingVertical: 12, backgroundColor: '#F3F4F6', borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  typeBtnAct: { backgroundColor: '#3B82F6', borderColor: '#3B82F6' },
 });

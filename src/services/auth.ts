@@ -4,8 +4,9 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../firebase/config";
 
 export interface UserData {
@@ -176,6 +177,29 @@ export const completeUserProfile = async (
 
     const snap = await getDoc(userDocRef);
     return snap.data() as UserData;
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};
+
+// ==================== RESET PASSWORD ====================
+
+export const resetPasswordWithVerification = async (email: string, phone: string) => {
+  try {
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      throw new Error("No account found with this email.");
+    }
+    
+    const userData = snapshot.docs[0].data() as UserData;
+    if (userData.phone !== phone) {
+      throw new Error("Phone number does not match our records.");
+    }
+    
+    await sendPasswordResetEmail(auth, email);
+    return true;
   } catch (error: any) {
     throw new Error(error.message);
   }

@@ -52,6 +52,30 @@ export default function Home({ navigation }: any) {
   const [claiming, setClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
 
+  // Auto Slider State
+  const bannerScrollRef = React.useRef<ScrollView>(null);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [displayBanners, setDisplayBanners] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Filter banners based on device width
+    const targetType = width < 768 ? 'mobile' : 'desktop';
+    const filtered = banners.filter((b) => !b.bannerType || b.bannerType === targetType);
+    setDisplayBanners(filtered.length > 0 ? filtered : banners); // fallback to all if empty
+  }, [banners]);
+
+  useEffect(() => {
+    if (displayBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentBannerIndex(prev => {
+        const next = (prev + 1) % displayBanners.length;
+        bannerScrollRef.current?.scrollTo({ x: next * (width - 40), animated: true });
+        return next;
+      });
+    }, 4000); // 4 seconds interval
+    return () => clearInterval(interval);
+  }, [displayBanners, width]);
+
   // Auto-hide scratch popup after 5s if not touched
   useEffect(() => {
     let timer: any;
@@ -318,23 +342,43 @@ export default function Home({ navigation }: any) {
 
       <ScrollView contentContainerStyle={s.scrollBody} showsVerticalScrollIndicator={false}>
 
-        {/* Promo Banners */}
-        {banners.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.bannerScroll}>
-            {banners.map(b => (
-              <ImageBackground key={b.id} source={{ uri: b.imageUrl }} style={s.bannerImg} imageStyle={{ borderRadius: 20 }}>
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 20 }]} />
-                <View style={s.bannerContent}>
-                  <Text style={[font, s.bannerTitle]}>{b.title}</Text>
-                  <TouchableOpacity style={s.bannerBtn} onPress={() => {
-                    if (b.linkType === 'category') navigation.navigate('Category', { categoryName: b.linkValue });
-                  }}>
-                    <Text style={[font, s.bannerBtnText]}>Shop Now</Text>
-                  </TouchableOpacity>
+        {/* Promo Banners (Auto Slider) */}
+        {displayBanners.length > 0 && (
+          <View style={s.bannerWrap}>
+            <ScrollView 
+              ref={bannerScrollRef}
+              horizontal 
+              pagingEnabled
+              showsHorizontalScrollIndicator={false} 
+              style={s.bannerScroll}
+              onScroll={(e) => {
+                const x = e.nativeEvent.contentOffset.x;
+                setCurrentBannerIndex(Math.round(x / (width - 40)));
+              }}
+              scrollEventThrottle={16}
+            >
+              {displayBanners.map(b => (
+                <View key={b.id} style={{ width: width - 40 }}>
+                  <ImageBackground source={{ uri: b.imageUrl }} style={s.bannerImg} imageStyle={{ borderRadius: 20 }}>
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 20 }]} />
+                    <View style={s.bannerContent}>
+                      <Text style={[font, s.bannerTitle]}>{b.title}</Text>
+                      <TouchableOpacity style={s.bannerBtn} onPress={() => {
+                        if (b.linkType === 'category') navigation.navigate('Category', { categoryName: b.linkValue });
+                      }}>
+                        <Text style={[font, s.bannerBtnText]}>Shop Now</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ImageBackground>
                 </View>
-              </ImageBackground>
-            ))}
-          </ScrollView>
+              ))}
+            </ScrollView>
+            <View style={s.dotRow}>
+              {displayBanners.map((_, i) => (
+                <View key={i} style={[s.dot, currentBannerIndex === i && s.dotActive]} />
+              ))}
+            </View>
+          </View>
         )}
 
         {/* Quick Actions */}
@@ -529,12 +573,16 @@ const s = StyleSheet.create({
   },
   searchPlaceholder: { marginLeft: 12, fontSize: 15, color: '#9CA3AF' },
   scrollBody: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 100 },
-  bannerScroll: { marginBottom: 24 },
-  bannerImg: { width: 300, height: 150, marginRight: 16, justifyContent: 'center', padding: 24 },
+  bannerWrap: { marginBottom: 24 },
+  bannerScroll: { },
+  bannerImg: { width: '100%', height: 160, justifyContent: 'center', padding: 24 },
   bannerContent: { zIndex: 1 },
   bannerTitle: { color: '#FFF', fontSize: 22, fontWeight: '900', marginBottom: 10, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
   bannerBtn: { backgroundColor: '#D4A843', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, alignSelf: 'flex-start' },
   bannerBtnText: { color: '#145A32', fontWeight: '900', fontSize: 13 },
+  dotRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 10, gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB' },
+  dotActive: { width: 14, backgroundColor: '#145A32' },
   // Quick Actions
   quickRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   quickCard: {

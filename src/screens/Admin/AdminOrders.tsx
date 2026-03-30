@@ -325,6 +325,7 @@ export default function AdminOrders() {
                 <p><strong>Type:</strong> ${o.orderType || 'One Time Delivery'}</p>
                 <p><strong>Date:</strong> ${dateStr}</p>
                 <p><strong>Payment Method:</strong> ${(o.paymentMethod||'COD').toUpperCase()}</p>
+                <p><strong>Delivery Slot:</strong> ${o.deliverySlot || 'Not Selected'}</p>
                 <p><strong>Status:</strong> ${(o.status||'Pending').toUpperCase()}</p>
               </div>
             </div>
@@ -459,6 +460,7 @@ export default function AdminOrders() {
                     <View style={s.detailRow}><Text style={[font,s.dLbl]}>Order No:</Text><Text style={[font,s.dVal]}>#{o.id.toUpperCase()}</Text></View>
                     <View style={s.detailRow}><Text style={[font,s.dLbl]}>Order Type:</Text><Text style={[font,s.dVal, {color: o.orderType === 'Auto Delivery' ? '#16A34A' : '#374151'}]}>{o.orderType || 'One Time'}</Text></View>
                     <View style={s.detailRow}><Text style={[font,s.dLbl]}>Date & Time:</Text><Text style={[font,s.dVal]}>{o.createdAt?.toDate?.()?.toLocaleString('en-IN') || 'N/A'}</Text></View>
+                    <View style={s.detailRow}><Text style={[font,s.dLbl]}>Delivery Slot:</Text><Text style={[font,s.dVal, {color: '#D97706'}]}>{o.deliverySlot || 'Not Selected'}</Text></View>
                     <View style={s.detailRow}><Text style={[font,s.dLbl]}>Payment Method:</Text><Text style={[font,s.dVal]}>{(o.paymentMethod||'COD').toUpperCase()} • {(o.paymentStatus||'Pending').toUpperCase()}</Text></View>
                     <View style={s.detailRow}><Text style={[font,s.dLbl]}>Order Status:</Text><Text style={[font,s.dVal,{color:STATUS_COLORS[o.status]||'#374151',fontWeight:'800'}]}>{(o.status||'Placed').toUpperCase()}</Text></View>
 

@@ -31,10 +31,12 @@ const font = {
 };
 
 const DELIVERY_SLOTS = [
-  { id: '1', label: 'Today', time: '2:00 PM - 4:00 PM', icon: '⚡' },
-  { id: '2', label: 'Today', time: '5:00 PM - 7:00 PM', icon: '🌇' },
-  { id: '3', label: 'Tomorrow', time: '9:00 AM - 11:00 AM', icon: '🌅' },
-  { id: '4', label: 'Tomorrow', time: '2:00 PM - 4:00 PM', icon: '☀️' },
+  { id: '1', label: 'Today', time: '8:00 AM - 10:00 AM', icon: '🌅' },
+  { id: '2', label: 'Today', time: '10:00 AM - 12:00 PM', icon: '☀️' },
+  { id: '3', label: 'Today', time: '4:00 PM - 6:00 PM', icon: '🌇' },
+  { id: '4', label: 'Tomorrow', time: '8:00 AM - 10:00 AM', icon: '🌅' },
+  { id: '5', label: 'Tomorrow', time: '10:00 AM - 12:00 PM', icon: '☀️' },
+  { id: '6', label: 'Tomorrow', time: '4:00 PM - 6:00 PM', icon: '🌇' },
 ];
 
 
