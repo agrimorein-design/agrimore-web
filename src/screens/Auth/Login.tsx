@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, TextInput,
   Alert, ActivityIndicator, Platform, StyleSheet, Image, Dimensions, Modal, ScrollView
 } from 'react-native';
-import { signInWithGoogle, loginUser, resetPasswordWithVerification } from '../../services/auth';
+import { signInWithGoogle, loginUser } from '../../services/auth';
 import { Mail, Lock, Eye, EyeOff, Phone, X } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -20,12 +20,6 @@ export default function Login({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
-
-  // Forgot Password Modal State
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotPhone, setForgotPhone] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -50,25 +44,6 @@ export default function Login({ navigation }: any) {
       Alert.alert('Login Failed', e.message);
     } finally {
       setLoginLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!forgotEmail || !forgotPhone) {
-      Alert.alert('Validation Error', 'Please enter both Email and Phone Number.');
-      return;
-    }
-    setResetLoading(true);
-    try {
-      await resetPasswordWithVerification(forgotEmail, forgotPhone);
-      Alert.alert('Success', 'Password reset email sent! Please check your inbox to set a new password.');
-      setShowForgotModal(false);
-      setForgotEmail('');
-      setForgotPhone('');
-    } catch (e: any) {
-      Alert.alert('Verification Failed', e.message);
-    } finally {
-      setResetLoading(false);
     }
   };
 
@@ -127,7 +102,7 @@ export default function Login({ navigation }: any) {
         </View>
 
         {/* Forgot Password Link */}
-        <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 20 }} onPress={() => setShowForgotModal(true)}>
+        <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 20 }} onPress={() => navigation.navigate('ForgotPassword')}>
           <Text style={[font, { color: '#D4A843', fontSize: 13, fontWeight: '700' }]}>Forgot Password?</Text>
         </TouchableOpacity>
 
@@ -168,50 +143,6 @@ export default function Login({ navigation }: any) {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Forgot Password Modal */}
-      <Modal visible={showForgotModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBody}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
-              <Text style={[font, { fontSize: 22, fontWeight: '900', color: '#111827' }]}>Reset Password</Text>
-              <TouchableOpacity onPress={() => setShowForgotModal(false)}>
-                <X color="#6B7280" size={24} />
-              </TouchableOpacity>
-            </View>
-            <Text style={[font, { fontSize: 13, color: '#6B7280', marginBottom: 20 }]}>Please enter your registered Email and Mobile Number to verify your identity.</Text>
-            
-            <View style={styles.modalInputRow}>
-              <Mail color="#D4A843" size={20} />
-              <TextInput
-                placeholder="Registered Email"
-                placeholderTextColor="#9CA3AF"
-                style={[font, styles.modalInput]}
-                value={forgotEmail}
-                onChangeText={setForgotEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={styles.modalInputRow}>
-              <Phone color="#D4A843" size={20} />
-              <TextInput
-                placeholder="Registered Mobile Number"
-                placeholderTextColor="#9CA3AF"
-                style={[font, styles.modalInput]}
-                value={forgotPhone}
-                onChangeText={setForgotPhone}
-                keyboardType="phone-pad"
-              />
-            </View>
-
-            <TouchableOpacity style={styles.resetBtn} onPress={handleForgotPassword} disabled={resetLoading}>
-              {resetLoading ? <ActivityIndicator color="#FFF" /> : <Text style={[font, { color: '#FFF', fontSize: 16, fontWeight: '900' }]}>Verify & Reset</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }

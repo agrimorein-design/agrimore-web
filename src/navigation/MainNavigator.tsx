@@ -6,6 +6,9 @@ import { useAuth } from '../context/AuthContext';
 
 import Splash from '../screens/Customer/Splash';
 import Login from '../screens/Auth/Login';
+import Register from '../screens/Auth/Register';
+import ForgotPassword from '../screens/Auth/ForgotPassword';
+import ResetPassword from '../screens/Auth/ResetPassword';
 import AddressSetup from '../screens/Customer/AddressSetup';
 import CustomerTabs from './CustomerTabs';
 import Checkout from '../screens/Customer/Checkout';
@@ -117,6 +120,9 @@ export default function MainNavigator() {
             <Stack.Screen name="ProductDetails" component={ProductDetails} />
             <Stack.Screen name="Search" component={SearchScreen} />
             <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Register" component={Register} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+            <Stack.Screen name="ResetPassword" component={ResetPassword} />
           </>
         ) : userData?.role === 'admin' ? (
           <>

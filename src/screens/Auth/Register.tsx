@@ -12,18 +12,25 @@ const font = {
 };
 
 export default function Register({ navigation }: any) {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !phone) { Alert.alert('Error', 'Please fill all fields'); return; }
+    if (!email || !password || !confirmPassword) { 
+      Alert.alert('Error', 'Please fill all fields'); 
+      return; 
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
     setLoading(true);
     try {
-      await registerUser(email, password, name, phone);
+      await registerUser(email, password, '', '');
       Alert.alert('Success', 'Account created successfully!');
     } catch (e: any) {
       Alert.alert('Registration Failed', e.message);
@@ -49,18 +56,6 @@ export default function Register({ navigation }: any) {
         <Text style={[font, styles.heading]}>Create Account</Text>
         <Text style={[font, styles.subheading]}>Sign up for exclusive deliveries</Text>
 
-        {/* Name */}
-        <View style={styles.inputRow}>
-          <User color="#D4A843" size={20} />
-          <TextInput
-            placeholder="Full Name"
-            placeholderTextColor="#9CA3AF"
-            style={[font, styles.input]}
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
-
         {/* Email */}
         <View style={styles.inputRow}>
           <Mail color="#D4A843" size={20} />
@@ -75,21 +70,8 @@ export default function Register({ navigation }: any) {
           />
         </View>
 
-        {/* Phone */}
-        <View style={styles.inputRow}>
-          <Phone color="#D4A843" size={20} />
-          <TextInput
-            placeholder="Mobile Number"
-            placeholderTextColor="#9CA3AF"
-            style={[font, styles.input]}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
-        </View>
-
         {/* Password */}
-        <View style={[styles.inputRow, { marginBottom: 30 }]}>
+        <View style={styles.inputRow}>
           <Lock color="#D4A843" size={20} />
           <TextInput
             placeholder="Password"
@@ -101,6 +83,22 @@ export default function Register({ navigation }: any) {
           />
           <TouchableOpacity onPress={() => setShowPwd(!showPwd)}>
             {showPwd ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#D4A843" size={20} />}
+          </TouchableOpacity>
+        </View>
+
+        {/* Confirm Password */}
+        <View style={[styles.inputRow, { marginBottom: 30 }]}>
+          <Lock color="#D4A843" size={20} />
+          <TextInput
+            placeholder="Confirm Password"
+            placeholderTextColor="#9CA3AF"
+            style={[font, styles.input]}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showConfirmPwd}
+          />
+          <TouchableOpacity onPress={() => setShowConfirmPwd(!showConfirmPwd)}>
+            {showConfirmPwd ? <EyeOff color="#9CA3AF" size={20} /> : <Eye color="#D4A843" size={20} />}
           </TouchableOpacity>
         </View>
 
