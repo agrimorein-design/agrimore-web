@@ -33,6 +33,8 @@ import SubscriptionSetup from '../screens/Customer/SubscriptionSetup';
 import MySubscriptions from '../screens/Customer/MySubscriptions';
 import Rewards from '../screens/Customer/Rewards';
 
+import PrivacyPolicy from '../screens/Customer/PrivacyPolicy';
+
 // Admin
 import AdminPanel from '../screens/Admin/AdminPanel';
 import AdminMap from '../screens/Admin/AdminMap';
@@ -111,8 +113,18 @@ export default function MainNavigator() {
     return <Splash />;
   }
 
+  const linking = {
+    prefixes: ['https://www.agrimore.in', 'agrimore://'],
+    config: {
+      screens: {
+        PrivacyPolicy: 'privacy-policy',
+        Customer: '', // Fallback for other routes
+      },
+    },
+  };
+
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
           <>
@@ -123,6 +135,7 @@ export default function MainNavigator() {
             <Stack.Screen name="Register" component={Register} />
             <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
             <Stack.Screen name="ResetPassword" component={ResetPassword} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
           </>
         ) : userData?.role === 'admin' ? (
           <>
@@ -150,6 +163,7 @@ export default function MainNavigator() {
             <Stack.Screen name="Language" component={Language} />
             <Stack.Screen name="Support" component={Support} />
             <Stack.Screen name="SellerApply" component={SellerApply} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
           </>
         ) : userData?.role === 'seller' ? (
           <>
@@ -176,6 +190,7 @@ export default function MainNavigator() {
             <Stack.Screen name="Support" component={Support} />
             <Stack.Screen name="SellerApply" component={SellerApply} />
             <Stack.Screen name="AdminPanel" component={AdminPanel} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
           </>
         ) : !userData?.phone ? (
           <Stack.Screen name="MobileSetup" component={MobileSetup} />
@@ -205,6 +220,7 @@ export default function MainNavigator() {
             <Stack.Screen name="Support" component={Support} />
             <Stack.Screen name="SellerApply" component={SellerApply} />
             <Stack.Screen name="AdminPanel" component={AdminPanel} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
           </>
         )}
       </Stack.Navigator>
