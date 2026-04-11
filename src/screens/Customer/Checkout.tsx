@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { useCart } from '../../context/CartContext';
 import { db } from '../../firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, getDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, getDoc, doc, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, MapPin, CreditCard, Banknote, Truck, Clock, Check, Smartphone, Wallet, ChevronRight, Tag, X } from 'lucide-react-native';
 import { TextInput } from 'react-native';
@@ -52,6 +52,7 @@ export default function Checkout({ navigation }: any) {
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [dbSlots, setDbSlots] = useState<any[]>([]);
+  const [config, setConfig] = useState({ deliveryCharge: 30, freeDeliveryMin: 499, minOrder: 100 });
 
   // Auto Delivery States
   const [orderType, setOrderType] = useState<'One Time' | 'Auto Delivery'>('One Time');
@@ -85,20 +86,28 @@ export default function Checkout({ navigation }: any) {
     }
   }, [orderType]);
 
-  // Fetch slots from appConfig Settings
+  // Fetch appConfig Settings real-time
   React.useEffect(() => {
-    const fetchSlots = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'appConfig'));
-        if (snap.exists() && snap.data().deliverySlots) {
-          const slots = snap.data().deliverySlots.filter((s:any) => s.active === true);
-          setDbSlots(slots);
+    const unsub = onSnapshot(doc(db, 'settings', 'appConfig'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setConfig({
+          deliveryCharge: data.deliveryCharge ?? 30,
+          freeDeliveryMin: data.freeDeliveryMin ?? 499,
+          minOrder: data.minOrder ?? 100
+        });
+        if (data.deliverySlots) {
+          setDbSlots(data.deliverySlots.filter((s:any) => s.active === true));
         } else {
-          setDbSlots(DELIVERY_SLOTS); // Fallback to local array
+          setDbSlots(DELIVERY_SLOTS);
         }
-      } catch (e) { console.error('Error fetching slots', e); }
-    };
-    fetchSlots();
+      } else {
+        setDbSlots(DELIVERY_SLOTS);
+      }
+    }, (e) => {
+      console.error('Error fetching slots', e);
+    });
+    return () => unsub();
   }, []);
 
   const handleApplyCoupon = async () => {
@@ -165,10 +174,14 @@ export default function Checkout({ navigation }: any) {
     }
   }
 
-  const deliveryFee = (cartTotal - discount) >= 499 ? 0 : 30;
+  const deliveryFee = (cartTotal - discount) >= config.freeDeliveryMin ? 0 : config.deliveryCharge;
   const total = cartTotal + deliveryFee - discount;
 
   const handlePlaceOrder = async () => {
+    if (cartTotal < config.minOrder) {
+      Alert.alert('Minimum Order Required', `Please add items worth ₹${config.minOrder - cartTotal} more to place this order.`);
+      return;
+    }
     if (!userData?.location || !userData?.defaultAddress) {
       Alert.alert('Error', 'Invalid delivery address configuration');
       return;

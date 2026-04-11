@@ -207,8 +207,8 @@ export default function AdminProducts() {
     if (Platform.OS === 'web') {
       if (window.confirm(msg)) {
         Promise.all(selectedIds.map(id => deleteDoc(doc(db, 'products', id))))
-          .then(() => { setSelectedIds([]); setIsSelectMode(false); window.alert('Products wiped'); })
-          .catch(e => window.alert('Error: ' + e.message));
+          .then(() => { setSelectedIds([]); setIsSelectMode(false); Platform.OS === 'web' ? window.alert('Products wiped') : Alert.alert('Notice', 'Products wiped'); })
+          .catch(e => Platform.OS === 'web' ? window.alert('Error: ' + e.message) : Alert.alert('Notice', 'Error: ' + e.message));
       }
     } else {
       Alert.alert('Bulk Delete', msg, [
@@ -257,7 +257,7 @@ export default function AdminProducts() {
     try {
       await updateDoc(doc(db, 'products', id), { status: 'approved' });
       if (Platform.OS === 'web') {
-         window.alert('✅ Product Approved!');
+         Platform.OS === 'web' ? window.alert('✅ Product Approved!') : Alert.alert('Notice', '✅ Product Approved!');
       } else {
          Alert.alert('Success', '✅ Product Approved!');
       }

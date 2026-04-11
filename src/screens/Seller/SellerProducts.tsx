@@ -173,7 +173,7 @@ export default function SellerProducts() {
     };
 
     if (Platform.OS === 'web') {
-      if (window.confirm('Delete this product?')) doDelete();
+      if (Platform.OS === 'web') { if (window.confirm('Delete this product?')) doDelete(); } else { Alert.alert('Confirm', 'Delete this product?', [{ text: 'Cancel', style: 'cancel' }, { text: 'OK', onPress: () => { doDelete(); } }]); }
     } else {
       Alert.alert('Confirm', 'Delete this product?', [
         { text: 'Cancel', style: 'cancel' },

@@ -116,7 +116,7 @@ export default function AdminSettings({ navigation }: any) {
         ]);
       }
     } catch (error: any) {
-      if (Platform.OS === 'web') window.alert(error.message);
+      if (Platform.OS === 'web') Platform.OS === 'web' ? window.alert(error.message) : Alert.alert('Notice', error.message);
       else Alert.alert('Error', error.message);
     }
   };

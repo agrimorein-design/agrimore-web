@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BackHandler, Alert, Platform } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 
 import Splash from '../screens/Customer/Splash';
@@ -108,6 +109,29 @@ export default function MainNavigator() {
       if (Platform.OS === 'web') window.onpopstate = null;
     };
   }, [navigationRef]);
+
+  // LOGIN REDIRECT LOGIC
+  useEffect(() => {
+    const checkRedirect = async () => {
+      if (user && userData && navigationRef.isReady()) {
+        try {
+          const redirectScreen = await AsyncStorage.getItem('redirectAfterLogin');
+          if (redirectScreen) {
+            await AsyncStorage.removeItem('redirectAfterLogin');
+            // Slight delay to allow navigation state to settle
+            setTimeout(() => {
+              if (navigationRef.isReady()) {
+                (navigationRef as any).navigate(redirectScreen);
+              }
+            }, 300);
+          }
+        } catch (e) {
+          console.error('Redirect check failed:', e);
+        }
+      }
+    };
+    checkRedirect();
+  }, [user, userData, navigationRef]);
 
   if (loading) {
     return <Splash />;

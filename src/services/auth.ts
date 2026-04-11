@@ -7,6 +7,7 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { Platform } from "react-native";
 import { auth, db } from "../firebase/config";
 
 export interface UserData {
@@ -108,6 +109,10 @@ const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async () => {
   try {
+    if (Platform.OS !== 'web') {
+      throw new Error('Google Sign-In is temporarily available only on the Website. Please use Email/Password on the Mobile App.');
+    }
+
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
     const emailStr = user.email || '';
@@ -151,8 +156,8 @@ export const signInWithGoogle = async () => {
       };
     }
   } catch (error: any) {
-    console.error('Google Sign-In error:', error.code, error.message);
-    throw new Error(getFirebaseErrorMessage(error.code) || error.message);
+    console.error('Google Sign-In error:', error.code || error.message);
+    throw new Error(error.code ? getFirebaseErrorMessage(error.code) : error.message);
   }
 };
 

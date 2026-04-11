@@ -12,6 +12,8 @@ const font = {
 };
 
 export default function Register({ navigation }: any) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,9 +22,13 @@ export default function Register({ navigation }: any) {
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword) { 
+    if (!name || !phone || !email || !password || !confirmPassword) { 
       Alert.alert('Error', 'Please fill all fields'); 
       return; 
+    }
+    if (phone.length < 10) {
+      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+      return;
     }
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
@@ -30,8 +36,9 @@ export default function Register({ navigation }: any) {
     }
     setLoading(true);
     try {
-      await registerUser(email, password, '', '');
+      await registerUser(email, password, name, phone);
       Alert.alert('Success', 'Account created successfully!');
+      navigation.navigate('Login'); // Optional but helpful redirect
     } catch (e: any) {
       Alert.alert('Registration Failed', e.message);
     } finally {
@@ -55,6 +62,33 @@ export default function Register({ navigation }: any) {
       <View style={styles.card}>
         <Text style={[font, styles.heading]}>Create Account</Text>
         <Text style={[font, styles.subheading]}>Sign up for exclusive deliveries</Text>
+
+        {/* Name */}
+        <View style={styles.inputRow}>
+          <User color="#D4A843" size={20} />
+          <TextInput
+            placeholder="Full Name"
+            placeholderTextColor="#9CA3AF"
+            style={[font, styles.input]}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+        </View>
+
+        {/* Phone */}
+        <View style={styles.inputRow}>
+          <Phone color="#D4A843" size={20} />
+          <TextInput
+            placeholder="Phone Number"
+            placeholderTextColor="#9CA3AF"
+            style={[font, styles.input]}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            maxLength={10}
+          />
+        </View>
 
         {/* Email */}
         <View style={styles.inputRow}>

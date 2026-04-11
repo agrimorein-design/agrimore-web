@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Platform } from 'react-native';
 import { useCart } from '../../context/CartContext';
+import { db } from '../../firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { Minus, Plus, Trash2, ArrowRight, Tag, Clock, ArrowLeft } from 'lucide-react-native';
 
 const font = {
@@ -17,6 +19,20 @@ const DELIVERY_SLOTS_QUICK = [
 
 export default function Cart({ navigation }: any) {
   const { cart, updateQuantity, removeFromCart, cartTotal } = useCart();
+  const [config, setConfig] = useState({ deliveryCharge: 30, freeDeliveryMin: 499 });
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'appConfig'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setConfig({
+          deliveryCharge: data.deliveryCharge ?? 30,
+          freeDeliveryMin: data.freeDeliveryMin ?? 499
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
 
   if (cart.length === 0) {
     return (
@@ -43,9 +59,9 @@ export default function Cart({ navigation }: any) {
     );
   }
 
-  const freeDeliveryThreshold = 499;
+  const freeDeliveryThreshold = config.freeDeliveryMin;
   const neededForFree = Math.max(0, freeDeliveryThreshold - cartTotal);
-  const deliveryFee = neededForFree > 0 ? 30 : 0;
+  const deliveryFee = neededForFree > 0 ? config.deliveryCharge : 0;
   const discount = 0;
   const total = cartTotal + deliveryFee - discount;
 

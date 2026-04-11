@@ -60,7 +60,7 @@ export default function AdminSellers() {
     };
 
     if (Platform.OS === 'web') {
-      if (window.confirm(msg)) doApprove();
+      if (Platform.OS === 'web') { if (window.confirm(msg)) doApprove(); } else { Alert.alert('Confirm', msg, [{ text: 'Cancel', style: 'cancel' }, { text: 'OK', onPress: () => { doApprove(); } }]); }
     } else {
       Alert.alert('Approve Seller', msg, [
         { text: 'Cancel', style: 'cancel' },
@@ -90,7 +90,7 @@ export default function AdminSellers() {
     };
 
     if (Platform.OS === 'web') {
-      if (window.confirm(msg)) doReject();
+      if (Platform.OS === 'web') { if (window.confirm(msg)) doReject(); } else { Alert.alert('Confirm', msg, [{ text: 'Cancel', style: 'cancel' }, { text: 'OK', onPress: () => { doReject(); } }]); }
     } else {
       Alert.alert('Reject Seller', msg, [
         { text: 'Cancel', style: 'cancel' },

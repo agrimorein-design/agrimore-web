@@ -169,15 +169,15 @@ export default function Category({ route, navigation }: any) {
               </View>
             ) : (
               products.map((p, i) => (
-                <Pressable key={p.id} style={s.card} onPress={() => navigation.navigate('ProductDetails', { product: p })}>
+                <Pressable key={p.id} style={[s.card, { marginRight: (i % 3 === 2) ? 0 : '2.7%' }]} onPress={() => navigation.navigate('ProductDetails', { product: p })}>
                   <View style={s.imgWrap}>
                     <Image source={{ uri: p.images?.[0] || 'https://via.placeholder.com/150' }} style={s.img} />
                     <TouchableOpacity style={s.addPlus} onPress={(e) => handleAddToCart(p, e)}>
                       <Text style={s.addPlusText}>+</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={[font, s.pName]} numberOfLines={1}>{p.name}</Text>
-                  <Text style={[font, s.pUnit]}>{p.variantsEnabled ? 'Options available' : p.unit}</Text>
+                  <Text style={[font, s.pName]} numberOfLines={2}>{p.name}</Text>
+                  <Text style={[font, s.pUnit]} numberOfLines={1}>{p.variantsEnabled ? 'Options' : p.unit}</Text>
                   <Text style={[font, s.pPrice]}>₹{p.discountPrice || p.price}</Text>
                 </Pressable>
               ))
@@ -232,38 +232,38 @@ const s = StyleSheet.create({
   catHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 },
   catTitle: { fontSize: 22, fontWeight: '900', color: '#145A32' },
   catSub: { fontSize: 14, color: '#9CA3AF', marginBottom: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
   card: {
-    width: '47%',
+    width: '31.5%',
     backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 6,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  imgWrap: { width: '100%', aspectRatio: 1, backgroundColor: '#F9FAFB', borderRadius: 12, marginBottom: 12 },
-  img: { width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 12 },
+  imgWrap: { width: '100%', aspectRatio: 1, backgroundColor: '#F9FAFB', borderRadius: 8, marginBottom: 8 },
+  img: { width: '100%', height: '100%', resizeMode: 'cover', borderRadius: 8 },
   addPlus: {
     position: 'absolute',
-    bottom: -8,
-    right: -8,
-    width: 36,
-    height: 36,
+    bottom: -6,
+    right: -6,
+    width: 26,
+    height: 26,
     backgroundColor: '#145A32',
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#FFF',
   },
-  addPlusText: { color: '#D4A843', fontSize: 20, fontWeight: 'bold', marginTop: -2 },
-  pName: { fontSize: 13, fontWeight: '900', color: '#1F2937', marginBottom: 2 },
-  pUnit: { fontSize: 11, color: '#9CA3AF', marginBottom: 6 },
-  pPrice: { fontSize: 16, fontWeight: '900', color: '#145A32' },
+  addPlusText: { color: '#D4A843', fontSize: 16, fontWeight: 'bold', marginTop: -2 },
+  pName: { fontSize: 10, fontWeight: '900', color: '#1F2937', marginBottom: 2, height: 28, lineHeight: 14 },
+  pUnit: { fontSize: 8, color: '#9CA3AF', marginBottom: 4 },
+  pPrice: { fontSize: 12, fontWeight: '900', color: '#145A32' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60, paddingHorizontal: 20 },
   emptyTitle: { fontSize: 18, color: '#1F2937', fontWeight: 'bold', marginBottom: 8 },
   emptySub: { fontSize: 14, color: '#9CA3AF', textAlign: 'center' },

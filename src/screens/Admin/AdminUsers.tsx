@@ -217,7 +217,8 @@ export default function AdminUsers() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[font, s.userName]}>{u.name || 'No Name'}</Text>
-                    <Text style={[font, s.userContact]}>{u.phone || u.email || 'No contact'}</Text>
+                    <Text style={[font, s.userContact]}>📞 {u.phone || 'No Phone'}</Text>
+                    <Text style={[font, s.userContact]}>📧 {u.email || 'No Email'}</Text>
                   </View>
                 </TouchableOpacity>
 

@@ -104,9 +104,9 @@ export default function AdminBanners() {
       if (window.confirm('Delete this banner permanently from the database?')) {
         try {
           await deleteDoc(doc(db, 'banners', id));
-          window.alert('✅ Real delete from backend successful');
+          Platform.OS === 'web' ? window.alert('✅ Real delete from backend successful') : Alert.alert('Notice', '✅ Real delete from backend successful');
         } catch (e: any) {
-          window.alert('❌ Database Error: ' + e.message);
+          Platform.OS === 'web' ? window.alert('❌ Database Error: ' + e.message) : Alert.alert('Notice', '❌ Database Error: ' + e.message);
         }
       }
     } else {
@@ -134,8 +134,8 @@ export default function AdminBanners() {
     if (Platform.OS === 'web') {
       if (window.confirm(msg)) {
         Promise.all(selectedIds.map(id => deleteDoc(doc(db, 'banners', id))))
-          .then(() => { setSelectedIds([]); setIsSelectMode(false); window.alert('Selected banners deleted successfully'); })
-          .catch(e => window.alert('Error: ' + e.message));
+          .then(() => { setSelectedIds([]); setIsSelectMode(false); Platform.OS === 'web' ? window.alert('Selected banners deleted successfully') : Alert.alert('Notice', 'Selected banners deleted successfully'); })
+          .catch(e => Platform.OS === 'web' ? window.alert('Error: ' + e.message) : Alert.alert('Notice', 'Error: ' + e.message));
       }
     } else {
       Alert.alert('Bulk Delete', msg, [

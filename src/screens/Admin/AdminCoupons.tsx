@@ -111,9 +111,9 @@ export default function AdminCoupons() {
       if (window.confirm('Delete this coupon permanently from the database?')) {
         try {
           await deleteDoc(doc(db, 'coupons', id));
-          window.alert('✅ Coupon deleted from Backend');
+          Platform.OS === 'web' ? window.alert('✅ Coupon deleted from Backend') : Alert.alert('Notice', '✅ Coupon deleted from Backend');
         } catch (e: any) {
-          window.alert('❌ Error: ' + e.message);
+          Platform.OS === 'web' ? window.alert('❌ Error: ' + e.message) : Alert.alert('Notice', '❌ Error: ' + e.message);
         }
       }
     } else {
@@ -141,8 +141,8 @@ export default function AdminCoupons() {
     if (Platform.OS === 'web') {
       if (window.confirm(msg)) {
         Promise.all(selectedIds.map(id => deleteDoc(doc(db, 'coupons', id))))
-          .then(() => { setSelectedIds([]); setIsSelectMode(false); window.alert('Coupons deleted successfully'); })
-          .catch(e => window.alert('Error: ' + e.message));
+          .then(() => { setSelectedIds([]); setIsSelectMode(false); Platform.OS === 'web' ? window.alert('Coupons deleted successfully') : Alert.alert('Notice', 'Coupons deleted successfully'); })
+          .catch(e => Platform.OS === 'web' ? window.alert('Error: ' + e.message) : Alert.alert('Notice', 'Error: ' + e.message));
       }
     } else {
       Alert.alert('Bulk Delete', msg, [

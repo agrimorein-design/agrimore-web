@@ -122,9 +122,9 @@ export default function AdminCategories() {
       if (window.confirm('Delete this category permanently from the database?')) {
         try {
           await deleteDoc(doc(db, 'categories', id));
-          window.alert('✅ Category deleted successfully from Backend');
+          Platform.OS === 'web' ? window.alert('✅ Category deleted successfully from Backend') : Alert.alert('Notice', '✅ Category deleted successfully from Backend');
         } catch (e: any) {
-          window.alert('❌ Error: ' + e.message);
+          Platform.OS === 'web' ? window.alert('❌ Error: ' + e.message) : Alert.alert('Notice', '❌ Error: ' + e.message);
         }
       }
     } else {
@@ -152,8 +152,8 @@ export default function AdminCategories() {
     if (Platform.OS === 'web') {
       if (window.confirm(msg)) {
         Promise.all(selectedIds.map(id => deleteDoc(doc(db, 'categories', id))))
-          .then(() => { setSelectedIds([]); setIsSelectMode(false); window.alert('Selected categories deleted'); })
-          .catch(e => window.alert('Error: ' + e.message));
+          .then(() => { setSelectedIds([]); setIsSelectMode(false); Platform.OS === 'web' ? window.alert('Selected categories deleted') : Alert.alert('Notice', 'Selected categories deleted'); })
+          .catch(e => Platform.OS === 'web' ? window.alert('Error: ' + e.message) : Alert.alert('Notice', 'Error: ' + e.message));
       }
     } else {
       Alert.alert('Bulk Delete', msg, [

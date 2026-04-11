@@ -5,6 +5,7 @@ import { db } from '../../firebase/config';
 import { collection, onSnapshot, getDocs, limit, query, where, updateDoc, doc, addDoc } from 'firebase/firestore';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+import { requireAuth } from '../../utils/authHelper';
 import ScratchCard from '../../components/ScratchCard';
 
 const { width, height } = Dimensions.get('window');
@@ -235,7 +236,7 @@ export default function Home({ navigation }: any) {
 
     return (
       <Pressable 
-        style={[s.card, isFeatured ? { width: 160, marginRight: 16 } : { width: '48%' }]} 
+        style={s.card} 
         onPress={() => navigation.navigate('ProductDetails', { product: p })}
       >
         <View style={s.imgWrap}>
@@ -249,19 +250,19 @@ export default function Home({ navigation }: any) {
 
         <View style={s.cardInfo}>
           <Text style={[font, s.cTitle]} numberOfLines={2}>{p.name}</Text>
-          <Text style={[font, s.cSubtitle]}>{p.unit}{!isFeatured ? ` • ${p.distanceRange}` : ''}</Text>
+          <Text style={[font, s.cSubtitle]}>{p.unit}</Text>
 
-          {!isFeatured && isLowStock && (
+          {isLowStock && (
             <Text style={[font, s.stockUrgency]}>🔥 Only {p.stock} left!</Text>
           )}
 
-          <View style={[s.priceRow, isFeatured && { marginTop: 8 }]}>
+          <View style={s.priceRow}>
             <View>
-              <Text style={[font, isFeatured ? { fontSize: 13, fontWeight: '900', color: '#145A32' } : s.cNprice]}>
+              <Text style={[font, s.cNprice]}>
                 ₹{p.discountPrice || p.price}
               </Text>
               {p.discountPrice && (
-                <Text style={[font, isFeatured ? { fontSize: 10, color: '#9CA3AF', textDecorationLine: 'line-through' } : s.cOprice]}>
+                <Text style={[font, s.cOprice]}>
                   ₹{p.price}
                 </Text>
               )}
@@ -269,7 +270,7 @@ export default function Home({ navigation }: any) {
 
             <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
               <TouchableOpacity
-                style={[s.addBtn, isAdded && s.addedBtn, isFeatured && { paddingHorizontal: 10 }]}
+                style={[s.addBtn, isAdded && s.addedBtn]}
                 onPress={handlePress}
                 disabled={p.stock <= 0}
               >
@@ -384,7 +385,11 @@ export default function Home({ navigation }: any) {
         {/* Quick Actions */}
         <View style={s.quickRow}>
           {QUICK_ACTIONS.map((a, i) => (
-            <TouchableOpacity key={i} style={s.quickCard} onPress={() => navigation.navigate(a.screen)}>
+            <TouchableOpacity 
+              key={i} 
+              style={s.quickCard} 
+              onPress={() => requireAuth(userData, navigation, () => navigation.navigate(a.screen), a.screen)}
+            >
               <View style={[s.quickIcon, { backgroundColor: `${a.color}15` }]}>
                 <Text style={{ fontSize: 22 }}>{a.emoji}</Text>
               </View>
@@ -447,8 +452,8 @@ export default function Home({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        {/* Product Grid with loading skeleton */}
-        <View style={s.grid}>
+        {/* Products Horizontal list with loading skeleton */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, marginHorizontal: -20, paddingHorizontal: 20 }}>
           {loadingProducts ? (
             <>
               <SkeletonCard />
@@ -461,7 +466,7 @@ export default function Home({ navigation }: any) {
               <ProductCard key={p.id} p={p} isFeatured={false} />
             ))
           )}
-        </View>
+        </ScrollView>
 
       </ScrollView>
 
@@ -606,35 +611,36 @@ const s = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 20, fontWeight: '900', color: '#145A32' },
   seeAll: { color: '#D4A843', fontSize: 13, fontWeight: '700', marginRight: 2 },
-  // Grid
+  // Grid / Cards
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   card: {
-    width: '48%',
+    width: 140,
+    marginRight: 16,
     backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: 16,
+    padding: 8,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
-  imgWrap: { width: '100%', aspectRatio: 1, borderRadius: 16, backgroundColor: '#F9FAFB', overflow: 'hidden', marginBottom: 12 },
+  imgWrap: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: '#F9FAFB', overflow: 'hidden', marginBottom: 10 },
   img: { width: '100%', height: '100%', resizeMode: 'cover' },
-  badge: { position: 'absolute', top: 0, left: 0, backgroundColor: '#D4A843', paddingHorizontal: 8, paddingVertical: 4, borderBottomRightRadius: 12 },
-  badgeText: { color: '#145A32', fontSize: 10, fontWeight: '900' },
+  badge: { position: 'absolute', top: 0, left: 0, backgroundColor: '#D4A843', paddingHorizontal: 6, paddingVertical: 3, borderBottomRightRadius: 10 },
+  badgeText: { color: '#145A32', fontSize: 9, fontWeight: '900' },
   cardInfo: { flex: 1 },
-  cTitle: { fontSize: 13, fontWeight: '700', color: '#1F2937', marginBottom: 2, height: 34 },
-  cSubtitle: { fontSize: 11, color: '#9CA3AF', marginBottom: 4 },
-  stockUrgency: { fontSize: 10, color: '#EF4444', fontWeight: '700', marginBottom: 4 },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' },
-  cNprice: { fontSize: 16, fontWeight: '900', color: '#145A32' },
-  cOprice: { fontSize: 11, color: '#9CA3AF', textDecorationLine: 'line-through' },
-  addBtn: { backgroundColor: 'rgba(20,90,50,0.1)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
-  addBtnText: { color: '#145A32', fontSize: 12, fontWeight: '900' },
+  cTitle: { fontSize: 12, fontWeight: '700', color: '#1F2937', marginBottom: 2, height: 32 },
+  cSubtitle: { fontSize: 10, color: '#9CA3AF', marginBottom: 6 },
+  stockUrgency: { fontSize: 9, color: '#EF4444', fontWeight: '700', marginBottom: 4 },
+  priceRow: { flexDirection: 'column', alignItems: 'flex-start', marginTop: 'auto' },
+  cNprice: { fontSize: 14, fontWeight: '900', color: '#145A32' },
+  cOprice: { fontSize: 10, color: '#9CA3AF', textDecorationLine: 'line-through' },
+  addBtn: { backgroundColor: 'rgba(20,90,50,0.1)', paddingVertical: 5, borderRadius: 8, marginTop: 8, width: '100%', alignItems: 'center' },
+  addBtnText: { color: '#145A32', fontSize: 10, fontWeight: '900' },
   addedBtn: { backgroundColor: '#145A32' },
   addedBtnText: { color: '#D4A843' },
   

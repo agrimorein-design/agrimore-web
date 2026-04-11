@@ -1,7 +1,10 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+// @ts-ignore
+import { getAuth, initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -18,7 +21,28 @@ const firebaseConfig = {
 // Initialize Firebase App (only once)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-const auth = getAuth(app);
+// Conditionally initialize Auth to prevent persistence/login issues on mobile
+let auth: any;
+if (!getApps().length || !app) {
+  auth = getAuth();
+} else {
+  // If we have just initialized it or getting it
+  try {
+    if (Platform.OS === 'web') {
+      auth = getAuth(app);
+    } else {
+      auth = initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage)
+      });
+    }
+  } catch (e: any) {
+    if (e.code === 'auth/already-initialized') {
+      auth = getAuth(app);
+    } else {
+      auth = getAuth(app);
+    }
+  }
+}
 
 const db = getFirestore(app);
 const storage = getStorage(app);

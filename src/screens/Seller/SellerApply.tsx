@@ -72,7 +72,7 @@ export default function SellerApply({ navigation }: any) {
       await refreshUserData();
 
       if (Platform.OS === 'web') {
-        window.alert('✅ Your seller application has been submitted! Admin will review it shortly.');
+        Platform.OS === 'web' ? window.alert('✅ Your seller application has been submitted! Admin will review it shortly.') : Alert.alert('Notice', '✅ Your seller application has been submitted! Admin will review it shortly.');
       } else {
         Alert.alert('Success', 'Your seller application has been submitted! Admin will review it shortly.');
       }

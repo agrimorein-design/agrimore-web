@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, ActivityIndicator, Share } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { logoutUser } from '../../services/auth';
 import { db } from '../../firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import {
   MapPin, Package, Heart, Settings, HelpCircle, LogOut, ChevronRight, Edit3,
-  Wallet, Gift, Bell, Globe, Shield, Repeat, Store
+  Wallet, Gift, Bell, Globe, Shield, Repeat, Store, Share2
 } from 'lucide-react-native';
 
 const font = {
@@ -48,6 +48,7 @@ export default function Profile({ navigation }: any) {
     { icon: Gift, label: 'Rewards & Offers', screen: 'Rewards', color: '#D4A843', bg: '#FEF9C3' },
     { icon: Bell, label: 'Notifications', screen: 'Notifications', color: '#F59E0B', bg: '#FFFBEB' },
     { icon: Globe, label: 'Language', screen: 'Language', color: '#06B6D4', bg: '#ECFEFF' },
+    { icon: Share2, label: 'Share with Friends', screen: 'ShareApp', color: '#EC4899', bg: '#FDF2F8' },
     { icon: HelpCircle, label: 'Help & Support', screen: 'Support', color: '#6366F1', bg: '#EEF2FF' },
     { icon: Settings, label: 'Settings', screen: null, color: '#6B7280', bg: '#F3F4F6' },
   ];
@@ -83,7 +84,7 @@ export default function Profile({ navigation }: any) {
         ]);
       }
     } catch (error: any) {
-      if (Platform.OS === 'web') window.alert(error.message);
+      if (Platform.OS === 'web') Platform.OS === 'web' ? window.alert(error.message) : Alert.alert('Notice', error.message);
       else Alert.alert('Error', error.message);
     }
   };
@@ -139,8 +140,16 @@ export default function Profile({ navigation }: any) {
               <TouchableOpacity
                 key={i}
                 style={s.menuItem}
-                onPress={() => {
-                  if (item.screen) {
+                onPress={async () => {
+                  if (item.screen === 'ShareApp') {
+                    try {
+                      await Share.share({
+                        message: 'Check out Agrimore! The best app for fresh grocery delivery. Download now: https://agrimore.in',
+                      });
+                    } catch (error: any) {
+                      Alert.alert('Error', error.message);
+                    }
+                  } else if (item.screen) {
                     navigation.navigate(item.screen);
                   }
                 }}
