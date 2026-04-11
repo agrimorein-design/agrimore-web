@@ -32,8 +32,8 @@ const CATEGORIES_H = [
 ];
 
 export default function Home({ navigation }: any) {
-  const [products, setProducts] = useState<any[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [freshProducts, setFreshProducts] = useState<any[]>([]);
+  const [bestSellingProducts, setBestSellingProducts] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
   const [homeCategories, setHomeCategories] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -106,16 +106,23 @@ export default function Home({ navigation }: any) {
   useEffect(() => {
     let isMounted = true;
     
-    const unsubProducts = onSnapshot(query(collection(db, 'products'), where('status', '==', 'approved'), limit(6)), (snap) => {
+    const unsubProducts = onSnapshot(query(collection(db, 'products'), where('status', '==', 'approved'), limit(50)), (snap) => {
       if(isMounted) {
-        setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoadingProducts(false);
-      }
-    });
+        const allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        const fresh = [...allDocs].sort((a: any, b: any) => {
+           const tA = a.createdAt?.seconds || 0;
+           const tB = b.createdAt?.seconds || 0;
+           return tB - tA;
+        }).slice(0, 9);
 
-    const unsubFeatured = onSnapshot(query(collection(db, 'products'), where('isFeatured', '==', true), where('status', '==', 'approved'), limit(8)), (snap) => {
-      if(isMounted) {
-        setFeaturedProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const bestSelling = [...allDocs].sort((a: any, b: any) => {
+           return (b.soldCount || 0) - (a.soldCount || 0);
+        }).slice(0, 9);
+        
+        setFreshProducts(fresh);
+        setBestSellingProducts(bestSelling);
+        setLoadingProducts(false);
       }
     });
 
@@ -136,7 +143,6 @@ export default function Home({ navigation }: any) {
     return () => {
       isMounted = false;
       unsubProducts();
-      unsubFeatured();
       unsubBanners();
       unsubCats();
     };
@@ -234,27 +240,30 @@ export default function Home({ navigation }: any) {
       handleAddToCart(p, e);
     };
 
+    const rating = p.averageRating ? parseFloat(p.averageRating).toFixed(1) : '4.5';
+    const reviews = p.reviewCount || Math.floor(Math.random() * 50) + 10;
+
     return (
       <Pressable 
-        style={s.card} 
+        style={s.gridCard} 
         onPress={() => navigation.navigate('ProductDetails', { product: p })}
       >
         <View style={s.imgWrap}>
           <Image source={{ uri: p.images?.[0] || 'https://via.placeholder.com/150' }} style={s.img} />
           {disc > 0 && (
-            <View style={s.badge}>
-              <Text style={[font, s.badgeText]}>{disc}% OFF</Text>
+            <View style={[s.badge, { paddingHorizontal: 4, paddingVertical: 2 }]}>
+              <Text style={[font, s.badgeText, { fontSize: 8 }]}>{disc}% OFF</Text>
             </View>
           )}
         </View>
 
         <View style={s.cardInfo}>
-          <Text style={[font, s.cTitle]} numberOfLines={2}>{p.name}</Text>
-          <Text style={[font, s.cSubtitle]}>{p.unit}</Text>
-
-          {isLowStock && (
-            <Text style={[font, s.stockUrgency]}>🔥 Only {p.stock} left!</Text>
-          )}
+          <Text style={[font, s.cTitle]} numberOfLines={1}>{p.name}</Text>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+             <Text style={{ fontSize: 9 }}>⭐</Text>
+             <Text style={[font, { fontSize: 9, color: '#4B5563', marginLeft: 2, fontWeight: '700' }]}>{rating} <Text style={{fontWeight: '400', color: '#9CA3AF'}}>({reviews})</Text></Text>
+          </View>
 
           <View style={s.priceRow}>
             <View>
@@ -267,18 +276,6 @@ export default function Home({ navigation }: any) {
                 </Text>
               )}
             </View>
-
-            <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-              <TouchableOpacity
-                style={[s.addBtn, isAdded && s.addedBtn]}
-                onPress={handlePress}
-                disabled={p.stock <= 0}
-              >
-                <Text style={[font, s.addBtnText, isAdded && s.addedBtnText]}>
-                  {p.stock <= 0 ? 'OUT' : p.variantsEnabled ? 'OPTIONS' : isAdded ? '✓' : 'ADD'}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
           </View>
         </View>
       </Pressable>
@@ -287,10 +284,10 @@ export default function Home({ navigation }: any) {
 
   // Skeleton placeholder
   const SkeletonCard = () => (
-    <View style={s.card}>
+    <View style={s.gridCard}>
       <View style={[s.imgWrap, { backgroundColor: '#E5E7EB' }]} />
-      <View style={{ height: 12, backgroundColor: '#E5E7EB', borderRadius: 6, marginBottom: 6, width: '80%' }} />
-      <View style={{ height: 10, backgroundColor: '#F3F4F6', borderRadius: 6, width: '50%' }} />
+      <View style={{ height: 10, backgroundColor: '#E5E7EB', borderRadius: 4, marginBottom: 4, width: '90%' }} />
+      <View style={{ height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, width: '40%' }} />
     </View>
   );
 
@@ -414,25 +411,10 @@ export default function Home({ navigation }: any) {
           </ScrollView>
         )}
 
-        {/* Featured Products */}
-        {featuredProducts.length > 0 && (
-          <View>
-            <View style={s.sectionHeader}>
-              <Text style={[font, s.sectionTitle]}>Featured List ⭐️</Text>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, marginHorizontal: -20, paddingHorizontal: 20 }}>
-              {featuredProducts.map((p) => (
-                <ProductCard key={p.id} p={p} isFeatured={true} />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Fresh Picks Header */}
+        {/* Fresh Products / Packets Header */}
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Text style={[font, s.sectionTitle]}>Fresh Picks 🌿</Text>
-            {/* DEMO Admin Scratch trigger */}
+            <Text style={[font, s.sectionTitle]}>Fresh Products / Packets 🌿</Text>
             {userData?.role === 'admin' && (
               <TouchableOpacity onPress={async () => {
                 await addDoc(collection(db, 'users', userData.uid, 'scratchCards'), {
@@ -446,27 +428,40 @@ export default function Home({ navigation }: any) {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => navigation.navigate('Shop')}>
-            <Text style={[font, s.seeAll]}>View All</Text>
-            <ChevronRight color="#D4A843" size={16} />
-          </TouchableOpacity>
         </View>
 
-        {/* Products Horizontal list with loading skeleton */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, marginHorizontal: -20, paddingHorizontal: 20 }}>
+        {/* Fresh Products 3x3 Grid */}
+        <View style={s.gridContainer}>
           {loadingProducts ? (
-            <>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </>
+            Array(9).fill(0).map((_, i) => <SkeletonCard key={i} />)
           ) : (
-            products.map((p) => (
+            freshProducts.map((p) => (
               <ProductCard key={p.id} p={p} isFeatured={false} />
             ))
           )}
-        </ScrollView>
+        </View>
+
+        {/* Best Selling Products Header */}
+        <View style={[s.sectionHeader, { marginTop: 10 }]}>
+          <Text style={[font, s.sectionTitle]}>Best Selling Products ⭐️</Text>
+        </View>
+
+        {/* Best Selling 3x3 Grid */}
+        <View style={s.gridContainer}>
+          {loadingProducts ? (
+            Array(9).fill(0).map((_, i) => <SkeletonCard key={i} />)
+          ) : (
+            bestSellingProducts.map((p) => (
+              <ProductCard key={p.id} p={p} isFeatured={true} />
+            ))
+          )}
+        </View>
+
+        {/* See All Products Button */}
+        <TouchableOpacity style={s.seeAllBtn} onPress={() => navigation.navigate('Shop')}>
+          <Text style={[font, s.seeAllBtnText]}>See All Products</Text>
+          <ChevronRight color="#FFF" size={18} />
+        </TouchableOpacity>
 
       </ScrollView>
 
@@ -612,37 +607,32 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: '900', color: '#145A32' },
   seeAll: { color: '#D4A843', fontSize: 13, fontWeight: '700', marginRight: 2 },
   // Grid / Cards
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  card: {
-    width: 140,
-    marginRight: 16,
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8, marginBottom: 20 },
+  gridCard: {
+    width: '31%',
     backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 8,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 6,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowRadius: 4,
     elevation: 2,
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
-  imgWrap: { width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: '#F9FAFB', overflow: 'hidden', marginBottom: 10 },
+  imgWrap: { width: '100%', aspectRatio: 1, borderRadius: 8, backgroundColor: '#F9FAFB', overflow: 'hidden', marginBottom: 6 },
   img: { width: '100%', height: '100%', resizeMode: 'cover' },
-  badge: { position: 'absolute', top: 0, left: 0, backgroundColor: '#D4A843', paddingHorizontal: 6, paddingVertical: 3, borderBottomRightRadius: 10 },
-  badgeText: { color: '#145A32', fontSize: 9, fontWeight: '900' },
-  cardInfo: { flex: 1 },
-  cTitle: { fontSize: 12, fontWeight: '700', color: '#1F2937', marginBottom: 2, height: 32 },
-  cSubtitle: { fontSize: 10, color: '#9CA3AF', marginBottom: 6 },
-  stockUrgency: { fontSize: 9, color: '#EF4444', fontWeight: '700', marginBottom: 4 },
+  badge: { position: 'absolute', top: 0, left: 0, backgroundColor: '#D4A843', paddingHorizontal: 4, paddingVertical: 2, borderBottomRightRadius: 8 },
+  badgeText: { color: '#145A32', fontSize: 8, fontWeight: '900' },
+  cardInfo: { flex: 1, paddingBottom: 2 },
+  cTitle: { fontSize: 10, fontWeight: '800', color: '#1F2937', marginBottom: 4 },
   priceRow: { flexDirection: 'column', alignItems: 'flex-start', marginTop: 'auto' },
-  cNprice: { fontSize: 14, fontWeight: '900', color: '#145A32' },
-  cOprice: { fontSize: 10, color: '#9CA3AF', textDecorationLine: 'line-through' },
-  addBtn: { backgroundColor: 'rgba(20,90,50,0.1)', paddingVertical: 5, borderRadius: 8, marginTop: 8, width: '100%', alignItems: 'center' },
-  addBtnText: { color: '#145A32', fontSize: 10, fontWeight: '900' },
-  addedBtn: { backgroundColor: '#145A32' },
-  addedBtnText: { color: '#D4A843' },
+  cNprice: { fontSize: 12, fontWeight: '900', color: '#145A32' },
+  cOprice: { fontSize: 8, color: '#9CA3AF', textDecorationLine: 'line-through' },
+  seeAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#145A32', paddingVertical: 14, borderRadius: 14, marginTop: 4, marginBottom: 24 },
+  seeAllBtnText: { color: '#FFF', fontWeight: '900', fontSize: 15, marginRight: 6 },
   
   // Floating Cart
   floatingCartWrap: { position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: 100 },

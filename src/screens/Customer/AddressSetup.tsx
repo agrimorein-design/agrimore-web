@@ -170,7 +170,7 @@ const WebPickerIframe = ({ mapRegion, mapType, iframeRef, onLoad }: any) => {
 import * as Location from 'expo-location';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { doc, getDoc, updateDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { ArrowLeft, Home, Building2, MapPin, User, Phone, Navigation, Map, ShieldCheck, Check, Layers, Crosshair } from 'lucide-react-native';
 
 const { height, width } = Dimensions.get('window');
@@ -365,24 +365,35 @@ export default function AddressSetup({ navigation }: any) {
     }
   }, []);
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleSaveAddress = async () => {
     if (!name || !phone || !house || !street || !pincode || !city) {
-      Alert.alert('Missing Info', 'Please fill all required fields safely.');
+      showAlert('Missing Info', 'Please fill all required fields carefully.');
       return;
     }
     
     // DELIVERY RESTRICTION - Chinnamanur only
-    if (city.toLowerCase() !== 'chinnamanur') {
-      Alert.alert('Delivery Area Restricted', 'Sorry, we currently only deliver to locations within Chinnamanur.');
+    if (city.trim().toLowerCase() !== 'chinnamanur') {
+      showAlert('Delivery Area Restricted', 'Sorry, we currently only deliver to locations within Chinnamanur.');
       return; // Block save
     }
 
-    if (pincode.length !== 6) {
-      Alert.alert('Invalid Pincode', 'Pincode must be exactly 6 digits.');
+    if (pincode.trim().length !== 6) {
+      showAlert('Invalid Pincode', 'Pincode must be exactly 6 digits.');
       return;
     }
 
-    if (!user) return;
+    if (!user) {
+      showAlert('Session Expired', 'Please login again to save your address');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -391,6 +402,7 @@ export default function AddressSetup({ navigation }: any) {
       const newAddress = {
         id: Date.now().toString(),
         type: addressType,
+        label: addressType,
         name,
         phone,
         house,
@@ -425,26 +437,30 @@ export default function AddressSetup({ navigation }: any) {
       const defaultAdd = updatedAddresses.find(a => a.isDefault)?.address || newAddress.address;
       const defaultLoc = updatedAddresses.find(a => a.isDefault)?.location || newAddress.location;
 
-      await updateDoc(userDocRef, {
+      await setDoc(userDocRef, {
         addresses: updatedAddresses,
         defaultAddress: defaultAdd,
         location: defaultLoc,
-      });
+      }, { merge: true });
 
       // Save to a direct collection for explicit requirements: (user_id, name, ... latitude, longitude)
       await addDoc(collection(db, 'users', user.uid, 'addresses'), newAddress);
 
       await refreshUserData();
-      Alert.alert('Success', 'Address saved successfully');
+      showAlert('Success', 'Address saved successfully');
       
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      } else {
-        navigation.replace('Customer');
+      try {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          navigation.replace('Customer');
+        }
+      } catch(navErr) {
+        // Navigation may fail if navigator unmounted due to Context change
       }
 
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      showAlert('Error', err.message);
     } finally {
       setLoading(false);
     }
@@ -549,7 +565,7 @@ export default function AddressSetup({ navigation }: any) {
       {step === 'form' && (
         <View style={s.bottomSheet}>
           <View style={s.sheetHandle} />
-          <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <Text style={[font, s.sheetTitle]}>Customer Details</Text>
 
             {/* Type Toggle */}

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platfo
 import { ArrowLeft, MapPin, Home, Briefcase, Plus, ChevronDown, ChevronUp, Check } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../firebase/config';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 
 const font = {
   fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
@@ -26,6 +26,14 @@ export default function Addresses({ navigation }: any) {
     fetchAddresses();
   }, [userData]);
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const fetchAddresses = async () => {
     if (!userData?.uid) { setLoading(false); return; }
     try {
@@ -38,7 +46,14 @@ export default function Addresses({ navigation }: any) {
   };
 
   const handleAdd = async () => {
-    if (!newLabel.trim() || !newAddress.trim() || !userData?.uid) return;
+    if (!newLabel.trim() || !newAddress.trim() || !newCity.trim() || !newPincode.trim()) {
+      showAlert('Missing Info', 'Please fill all fields');
+      return;
+    }
+    if (!userData?.uid) {
+      showAlert('Error', 'User not found. Please log in.');
+      return;
+    }
     try {
       const addrData = {
         label: newLabel,
@@ -48,7 +63,7 @@ export default function Addresses({ navigation }: any) {
       };
       const docRef = await addDoc(collection(db, 'users', userData.uid, 'addresses'), addrData);
       if (addresses.length === 0) {
-        await updateDoc(doc(db, 'users', userData.uid), { defaultAddress: addrData.address });
+        await setDoc(doc(db, 'users', userData.uid), { defaultAddress: addrData.address }, { merge: true });
       }
       setAddresses([...addresses, { id: docRef.id, ...addrData }]);
       setShowAddForm(false);
@@ -56,21 +71,22 @@ export default function Addresses({ navigation }: any) {
       setNewAddress('');
       setNewCity('');
       setNewPincode('');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error adding address:', e);
+      showAlert('Error Saving Address', e.message);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (addresses.length <= 1) {
-      Alert.alert('Action Denied', 'At least 1 address is required.');
+      showAlert('Action Denied', 'At least 1 address is required.');
       return;
     }
     const target = addresses.find(a => a.id === id);
     if (!target) return;
 
     if (target.isPrimary) {
-      Alert.alert('Action Denied', 'Please set another address as primary before deleting this one.');
+      showAlert('Action Denied', 'Please set another address as primary before deleting this one.');
       return;
     }
 
@@ -95,10 +111,11 @@ export default function Addresses({ navigation }: any) {
         }
       }
       await updateDoc(doc(db, 'users', userData.uid, 'addresses', id), { isPrimary: true });
-      await updateDoc(doc(db, 'users', userData.uid), { defaultAddress: target.address });
+      await setDoc(doc(db, 'users', userData.uid), { defaultAddress: target.address }, { merge: true });
       setAddresses(addresses.map(a => ({ ...a, isPrimary: a.id === id })));
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error setting primary:', e);
+      showAlert('Error', e.message);
     }
   };
 
@@ -125,7 +142,7 @@ export default function Addresses({ navigation }: any) {
         <View style={{ width: 38 }} />
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {addresses.length === 0 && !showAddForm ? (
           <View style={{ alignItems: 'center', marginTop: 60 }}>
             <Text style={{ fontSize: 48, marginBottom: 12 }}>📍</Text>

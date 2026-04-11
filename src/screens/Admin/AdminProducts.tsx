@@ -4,7 +4,11 @@ import { db } from '../../firebase/config';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
-import { Search, Plus, Edit2, X, Eye, EyeOff, Save, Trash2, ChevronDown, Image as ImgIcon, CheckCircle, Circle, Star } from 'lucide-react-native';
+import * as XLSX from 'xlsx';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
+import { Search, Plus, Edit2, X, Eye, EyeOff, Save, Trash2, ChevronDown, Image as ImgIcon, CheckCircle, Circle, Star, Download, Upload } from 'lucide-react-native';
 
 const font = { fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' };
 
@@ -24,6 +28,7 @@ export default function AdminProducts() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isDailyUpdate, setIsDailyUpdate] = useState(false);
   const [price, setPrice] = useState('');
   const [discountPrice, setDiscountPrice] = useState('');
   const [stock, setStock] = useState('10');
@@ -116,6 +121,7 @@ export default function AdminProducts() {
       setName(p.name || '');
       setCategory(p.categoryName || p.category || '');
       setIsFeatured(!!p.isFeatured);
+      setIsDailyUpdate(!!p.isDailyUpdate);
       setPrice(String(p.price || ''));
       setDiscountPrice(String(p.discountPrice || ''));
       setStock(String(p.stock || '0'));
@@ -126,7 +132,7 @@ export default function AdminProducts() {
       setVariants((p.variants || []).map((v: any) => ({ label: v.label || '', price: String(v.price || ''), discountPrice: String(v.discountPrice || v.price || '') })));
     } else {
       setEditId(null);
-      setName(''); setCategory(''); setIsFeatured(false); setPrice(''); setDiscountPrice(''); setStock('10'); setUnit('kg'); setDescription(''); setImages([]); setVariantsEnabled(false); setVariants([]);
+      setName(''); setCategory(''); setIsFeatured(false); setIsDailyUpdate(false); setPrice(''); setDiscountPrice(''); setStock('10'); setUnit('kg'); setDescription(''); setImages([]); setVariantsEnabled(false); setVariants([]);
     }
     setShowForm(true);
   };
@@ -153,6 +159,7 @@ export default function AdminProducts() {
         price: finalPrice,
         discountPrice: finalDiscount,
         isFeatured,
+        isDailyUpdate,
         variantsEnabled,
         stock: parseInt(stock, 10) || 0,
         unit,
@@ -174,12 +181,13 @@ export default function AdminProducts() {
 
   const handleDelete = async (id: string) => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Delete this product?')) {
+      const confirmMsg = typeof window !== 'undefined' ? window.confirm('Delete this product?') : true;
+      if (confirmMsg) {
         try {
           await deleteDoc(doc(db, 'products', id));
-          window.alert('✅ Successfully deleted from Database (Real Delete)');
+          if(typeof window !== 'undefined') window.alert('✅ Successfully deleted from Database (Real Delete)');
         } catch (e: any) {
-          window.alert('❌ Error deleting from server: ' + e.message);
+          if(typeof window !== 'undefined') window.alert('❌ Error deleting from server: ' + e.message);
         }
       }
     } else {
@@ -205,10 +213,11 @@ export default function AdminProducts() {
     if (selectedIds.length === 0) return;
     const msg = `Are you sure you want to delete ${selectedIds.length} products entirely?`;
     if (Platform.OS === 'web') {
-      if (window.confirm(msg)) {
+      const confirmMsg = typeof window !== 'undefined' ? window.confirm(msg) : true;
+      if (confirmMsg) {
         Promise.all(selectedIds.map(id => deleteDoc(doc(db, 'products', id))))
-          .then(() => { setSelectedIds([]); setIsSelectMode(false); Platform.OS === 'web' ? window.alert('Products wiped') : Alert.alert('Notice', 'Products wiped'); })
-          .catch(e => Platform.OS === 'web' ? window.alert('Error: ' + e.message) : Alert.alert('Notice', 'Error: ' + e.message));
+          .then(() => { setSelectedIds([]); setIsSelectMode(false); Platform.OS === 'web' && typeof window !== 'undefined' ? window.alert('Products wiped') : Alert.alert('Notice', 'Products wiped'); })
+          .catch(e => Platform.OS === 'web' && typeof window !== 'undefined' ? window.alert('Error: ' + e.message) : Alert.alert('Notice', 'Error: ' + e.message));
       }
     } else {
       Alert.alert('Bulk Delete', msg, [
@@ -257,7 +266,7 @@ export default function AdminProducts() {
     try {
       await updateDoc(doc(db, 'products', id), { status: 'approved' });
       if (Platform.OS === 'web') {
-         Platform.OS === 'web' ? window.alert('✅ Product Approved!') : Alert.alert('Notice', '✅ Product Approved!');
+         Platform.OS === 'web' && typeof window !== 'undefined' ? window.alert('✅ Product Approved!') : Alert.alert('Notice', '✅ Product Approved!');
       } else {
          Alert.alert('Success', '✅ Product Approved!');
       }
@@ -284,6 +293,410 @@ export default function AdminProducts() {
     }
   };
 
+  const exportDailyUpdateExcel = async () => {
+    try {
+        const dailyProducts = products.filter(p => p.isDailyUpdate);
+        if (dailyProducts.length === 0) {
+            Alert.alert('Notice', 'No products have Daily Update enabled. Please enable it for some products first.');
+            return;
+        }
+
+        const data: any[] = [];
+        dailyProducts.forEach(p => {
+            if (p.variantsEnabled && p.variants && p.variants.length > 0) {
+                p.variants.forEach((v: any) => {
+                    data.push({
+                        ProductID: p.id,
+                        ProductName: p.name,
+                        VariantName: v.label,
+                        MRP: v.price,
+                        SalePrice: v.discountPrice || v.price
+                    });
+                });
+            } else {
+                data.push({
+                    ProductID: p.id,
+                    ProductName: p.name,
+                    VariantName: 'N/A',
+                    MRP: p.price,
+                    SalePrice: p.discountPrice || p.price
+                });
+            }
+        });
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "DailyUpdate");
+
+        if (Platform.OS === 'web') {
+            XLSX.writeFile(wb, `Agrimore_Daily_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`);
+        } else {
+            const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+            // @ts-ignore
+            const fileUri = FileSystem.documentDirectory + `Agrimore_Daily_Price_Update_${new Date().toISOString().split('T')[0]}.xlsx`;
+            // @ts-ignore
+            await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+            await Sharing.shareAsync(fileUri);
+        }
+    } catch (e: any) {
+        Alert.alert('Export Error', e.message);
+    }
+  };
+
+  const importDailyUpdateExcel = async () => {
+    try {
+        const result = await DocumentPicker.getDocumentAsync({
+            type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv', '*/*'],
+            copyToCacheDirectory: true
+        });
+
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        const file = result.assets[0];
+        
+        if (Platform.OS === 'web') {
+            const msg = typeof window !== 'undefined' ? window.confirm('Process this Excel file for Daily Update?') : true;
+            if(!msg) return;
+        }
+
+        let wb;
+        if (Platform.OS === 'web') {
+            const response = await fetch(file.uri);
+            const arrayBuffer = await response.arrayBuffer();
+            wb = XLSX.read(arrayBuffer, { type: 'array' });
+        } else {
+            // @ts-ignore
+            const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
+            wb = XLSX.read(base64, { type: 'base64' });
+        }
+        
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data.length === 0) {
+            Alert.alert('Notice', 'The Excel file is empty.');
+            return;
+        }
+
+        const updatesByName: Record<string, any[]> = {};
+        data.forEach((row: any) => {
+            const rName = String(row.ProductName || '').trim().toLowerCase();
+            if (!rName) return;
+            if (!updatesByName[rName]) updatesByName[rName] = [];
+            updatesByName[rName].push(row);
+        });
+
+        let updatedCount = 0;
+        setLoading(true);
+        for (const p of products) {
+            if (!p.isDailyUpdate) continue; 
+            
+            const pName = String(p.name || '').trim().toLowerCase();
+            if (!updatesByName[pName]) continue;
+
+            const rows = updatesByName[pName];
+            const updates: any = {};
+            let changed = false;
+
+            if (p.variantsEnabled) {
+                let newVariants = [...(p.variants || [])];
+                rows.forEach((row: any) => {
+                    const rVar = String(row.VariantName || '').trim().toLowerCase();
+                    const vIndex = newVariants.findIndex(v => String(v.label || '').trim().toLowerCase() === rVar);
+                    if (vIndex !== -1) {
+                        const newMrp = parseFloat(row.MRP);
+                        const newSale = parseFloat(row.SalePrice);
+                        if (!isNaN(newMrp)) newVariants[vIndex].price = newMrp;
+                        if (!isNaN(newSale)) newVariants[vIndex].discountPrice = newSale;
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    updates.variants = newVariants;
+                    updates.price = Math.min(...newVariants.map(v => parseFloat(v.price) || 0));
+                    updates.discountPrice = Math.min(...newVariants.map(v => parseFloat(v.discountPrice) || parseFloat(v.price) || 0));
+                }
+            } else {
+                const row = rows[0];
+                const newMrp = parseFloat(row.MRP);
+                const newSale = parseFloat(row.SalePrice);
+                if (!isNaN(newMrp)) { updates.price = newMrp; changed = true; }
+                if (!isNaN(newSale)) { updates.discountPrice = newSale; changed = true; }
+            }
+
+            if (changed) {
+                updates.updatedAt = new Date();
+                await updateDoc(doc(db, 'products', p.id), updates);
+                updatedCount++;
+            }
+        }
+        setLoading(false);
+        if (Platform.OS === 'web') {
+           window.alert(`✅ Success: Updated prices for ${updatedCount} products!`);
+        } else {
+           Alert.alert('Success', `Updated prices for ${updatedCount} products!`);
+        }
+    } catch (e: any) {
+        setLoading(false);
+        if (Platform.OS === 'web') window.alert('Import Error: Failed to process Excel file.');
+        else Alert.alert('Import Error', 'Failed to process Excel file. Please ensure it is the correct format.');
+    }
+  };
+
+  const downloadBulkTemplate = async () => {
+    try {
+      const availCats = categories.map(c => c.name).join(', ');
+      const data = [{
+        'Product Name*': 'Instructions (DO NOT IMPORT THIS ROW)',
+        'Category*': `USE ONLY: ${availCats}`,
+        'Featured Product': 'ON/OFF',
+        'Daily Price Update': 'ON/OFF',
+        'Enable Variants': 'ON/OFF',
+        'Price ₹*': 0,
+        'Sale Price': 0,
+        'Stock': 0,
+        'Unit / Variant Name*': 'Weight/Size',
+        'Description': 'Add same Product Name in multiple rows to add Variants',
+        'Image1': 'URL',
+        'Image2': 'URL',
+        'Image3': 'URL',
+        'Image4': 'URL',
+        'Image5': 'URL'
+      }, {
+        'Product Name*': 'Organic Tomato',
+        'Category*': categories[0]?.name || 'Vegetables',
+        'Featured Product': 'ON',
+        'Daily Price Update': 'ON',
+        'Enable Variants': 'ON',
+        'Price ₹*': 50,
+        'Sale Price': 40,
+        'Stock': 100,
+        'Unit / Variant Name*': '1 Kg',
+        'Description': 'Fresh organic tomatoes from local farms',
+        'Image1': 'https://via.placeholder.com/150',
+        'Image2': '',
+        'Image3': '',
+        'Image4': '',
+        'Image5': ''
+      }, {
+        'Product Name*': 'Organic Tomato',
+        'Category*': categories[0]?.name || 'Vegetables',
+        'Featured Product': 'ON',
+        'Daily Price Update': 'ON',
+        'Enable Variants': 'ON',
+        'Price ₹*': 25,
+        'Sale Price': 20,
+        'Stock': 50,
+        'Unit / Variant Name*': '500 g',
+        'Description': 'Fresh organic tomatoes from local farms',
+        'Image1': 'https://via.placeholder.com/150',
+        'Image2': '',
+        'Image3': '',
+        'Image4': '',
+        'Image5': ''
+      }, {
+        'Product Name*': 'Potato Chips',
+        'Category*': categories[1]?.name || 'Snacks',
+        'Featured Product': 'OFF',
+        'Daily Price Update': 'OFF',
+        'Enable Variants': 'OFF',
+        'Price ₹*': 30,
+        'Sale Price': 30,
+        'Stock': 20,
+        'Unit / Variant Name*': 'Packet',
+        'Description': 'Crunchy potato chips',
+        'Image1': '',
+        'Image2': '',
+        'Image3': '',
+        'Image4': '',
+        'Image5': ''
+      }];
+
+      const ws = XLSX.utils.json_to_sheet(data);
+
+      const catData = categories.map(c => ({ 'Available Categories (Copy from here)': c.name }));
+      const wsCats = XLSX.utils.json_to_sheet(catData.length > 0 ? catData : [{ 'Available Categories': 'No categories yet' }]);
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "BulkUploadTemplate");
+      XLSX.utils.book_append_sheet(wb, wsCats, "Categories");
+
+      if (Platform.OS === 'web') {
+        XLSX.writeFile(wb, `Agrimore_Bulk_Product_Template.xlsx`);
+      } else {
+        const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+        // @ts-ignore
+        const fileUri = FileSystem.documentDirectory + `Agrimore_Bulk_Product_Template.xlsx`;
+        // @ts-ignore
+        await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+        await Sharing.shareAsync(fileUri);
+      }
+    } catch (e: any) {
+      Alert.alert('Export Error', e.message);
+    }
+  };
+
+  const importBulkProducts = async () => {
+    try {
+        const result = await DocumentPicker.getDocumentAsync({
+            type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv', '*/*'],
+            copyToCacheDirectory: true
+        });
+
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        const file = result.assets[0];
+        
+        if (Platform.OS === 'web') {
+            const msg = typeof window !== 'undefined' ? window.confirm('Process this Excel file to bulk add products?') : true;
+            if(!msg) return;
+        }
+
+        let wb;
+        if (Platform.OS === 'web') {
+            const response = await fetch(file.uri);
+            const arrayBuffer = await response.arrayBuffer();
+            wb = XLSX.read(arrayBuffer, { type: 'array' });
+        } else {
+            // @ts-ignore
+            const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
+            wb = XLSX.read(base64, { type: 'base64' });
+        }
+        
+        // Use the first sheet for Products
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        let data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data.length === 0) {
+            Alert.alert('Notice', 'The Excel file is empty.');
+            return;
+        }
+
+        // Filter out the instruction row
+        data = data.filter((row: any) => row['Product Name*'] !== 'Instructions (DO NOT IMPORT THIS ROW)');
+
+        // Validate Categories
+        const existingCategoryNames = categories.map(c => c.name.toLowerCase().trim());
+        const invalidCategories = new Set<string>();
+
+        data.forEach((row: any) => {
+            const pName = String(row['Product Name*'] || '').trim();
+            if(!pName) return;
+            const rCat = String(row['Category*'] || row['Category'] || '').trim();
+            if (rCat && !existingCategoryNames.includes(rCat.toLowerCase())) {
+                invalidCategories.add(rCat);
+            }
+        });
+
+        if (invalidCategories.size > 0) {
+            const invalidList = Array.from(invalidCategories).join(', ');
+            const validStr = categories.map(c => c.name).join(', ');
+            if (Platform.OS === 'web') {
+                if(typeof window !== 'undefined') window.alert(`❌ ERROR: Invalid Categories Found!\n\nYou used: ${invalidList}\n\nPlease use ONLY the available categories:\n${validStr}`);
+            } else {
+                Alert.alert(
+                    'Invalid Category Error ❌', 
+                    `You used unrecognised categories: ${invalidList}.\n\nPlease use ONLY the following exact categories:\n${validStr}`
+                );
+            }
+            return;
+        }
+
+        const grouped: Record<string, any[]> = {};
+        data.forEach((row: any) => {
+            const pName = String(row['Product Name*'] || row['Product Name'] || '').trim();
+            if (!pName) return;
+            const key = pName.toLowerCase();
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(row);
+        });
+
+        let addedCount = 0;
+        setLoading(true);
+        for (const key of Object.keys(grouped)) {
+            const rows = grouped[key];
+            const first = rows[0];
+            
+            const isFeatured = String(first['Featured Product'] || first['Featured'] || '').trim().toUpperCase() === 'ON';
+            const isDailyUpdateValue = String(first['Daily Price Update'] || first['Daily Update'] || '').trim().toUpperCase() === 'ON';
+            const variantsEnabledValue = String(first['Enable Variants'] || '').trim().toUpperCase() === 'ON';
+
+            const name = String(first['Product Name*'] || first['Product Name'] || '').trim();
+            const categoryName = String(first['Category*'] || first['Category'] || '').trim();
+            const description = String(first['Description'] || '').trim();
+            
+            const images = [];
+            for (let i=1; i<=5; i++) {
+                const img = String(first[`Image${i}`] || '').trim();
+                if (img) images.push(img);
+            }
+
+            let finalPrice = 0;
+            let finalDiscount = 0;
+            let finalStock = 0;
+            let finalUnit = '';
+            let parsedVariants: any[] = [];
+
+            if (variantsEnabledValue && rows.length > 0) {
+                rows.forEach((r: any) => {
+                    const vPrice = parseFloat(String(r['Price ₹*'] || r['Price'] || r.Price)) || 0;
+                    const vDisc = parseFloat(String(r['Sale Price'] || r.SalePrice)) || vPrice;
+                    parsedVariants.push({
+                        label: String(r['Unit / Variant Name*'] || r['Unit'] || '').trim(),
+                        price: vPrice,
+                        discountPrice: vDisc
+                    });
+                });
+                finalPrice = Math.min(...parsedVariants.map(v => v.price));
+                finalDiscount = Math.min(...parsedVariants.map(v => v.discountPrice || v.price));
+                finalStock = parseInt(first.Stock) || 10;
+                finalUnit = String(first['Unit / Variant Name*'] || first.Unit || '').trim();
+            } else {
+                finalPrice = parseFloat(String(first['Price ₹*'] || first.Price)) || 0;
+                finalDiscount = parseFloat(String(first['Sale Price'] || first.SalePrice)) || finalPrice;
+                finalStock = parseInt(first.Stock) || 10;
+                finalUnit = String(first['Unit / Variant Name*'] || first.Unit || '').trim();
+            }
+
+            const newProduct = {
+                name,
+                categoryName,
+                price: finalPrice,
+                discountPrice: finalDiscount,
+                isFeatured,
+                isDailyUpdate: isDailyUpdateValue,
+                variantsEnabled: variantsEnabledValue,
+                stock: finalStock,
+                unit: finalUnit,
+                description,
+                images,
+                variants: parsedVariants,
+                status: 'approved',
+                isAvailable: true,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+
+            await addDoc(collection(db, 'products'), newProduct);
+            addedCount++;
+        }
+        
+        setShowForm(false);
+        setLoading(false);
+        if (Platform.OS === 'web') {
+           if(typeof window !== 'undefined') window.alert(`✅ Success: Bulk added ${addedCount} products!`);
+        } else {
+           Alert.alert('Success', `Bulk added ${addedCount} products!`);
+        }
+    } catch (e: any) {
+        setLoading(false);
+        if (Platform.OS === 'web') {
+            if(typeof window !== 'undefined') window.alert('Import Error: Failed to process Excel file. ' + e.message);
+        }
+        else Alert.alert('Import Error', 'Failed to process Excel file. Please ensure it matches the template.');
+    }
+  };
+
   return (
     <View style={s.root}>
       <View style={s.header}>
@@ -304,10 +717,18 @@ export default function AdminProducts() {
             </TouchableOpacity>
           )}
           {!showForm && !isSelectMode && (
-            <TouchableOpacity style={s.addBtn} onPress={() => openForm(null)}>
-              <Plus color="#FFF" size={16} />
-              <Text style={[font, { color: '#FFF', fontWeight: 'bold', marginLeft: 4, fontSize: 13 }]}>Add</Text>
-            </TouchableOpacity>
+             <View style={{flexDirection: 'row', gap: 8}}>
+              <TouchableOpacity style={[s.addBtn, {backgroundColor: '#8B5CF6', paddingHorizontal: 12}]} onPress={exportDailyUpdateExcel}>
+                <Download color="#FFF" size={16} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.addBtn, {backgroundColor: '#F59E0B', paddingHorizontal: 12}]} onPress={importDailyUpdateExcel}>
+                <Upload color="#FFF" size={16} />
+              </TouchableOpacity>
+              <TouchableOpacity style={s.addBtn} onPress={() => openForm(null)}>
+                <Plus color="#FFF" size={16} />
+                <Text style={[font, { color: '#FFF', fontWeight: 'bold', marginLeft: 4, fontSize: 13 }]}>Add</Text>
+              </TouchableOpacity>
+            </View>
           )}
           {showForm && (
             <TouchableOpacity onPress={() => setShowForm(false)}><X color="#6B7280" size={24} /></TouchableOpacity>
@@ -332,6 +753,27 @@ export default function AdminProducts() {
 
       {showForm ? (
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+          
+          {/* BULK UPLOAD SECTION */}
+          {!editId && (
+            <View style={{ backgroundColor: '#F0F9FF', padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#BAE6FD' }}>
+              <Text style={[font, { fontSize: 16, fontWeight: '800', color: '#0369A1', marginBottom: 8 }]}>🚀 Bulk Product Upload</Text>
+              <Text style={[font, { fontSize: 13, color: '#0284C7', marginBottom: 16, lineHeight: 20 }]}>
+                Add 100+ products easily. Set 'Enable Variants' to ON and add multiple rows with the same Product Name to auto-create variants.
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: '#0EA5E9', paddingVertical: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }} onPress={downloadBulkTemplate}>
+                  <Download color="#FFF" size={16} />
+                  <Text style={[font, { color: '#FFF', fontWeight: 'bold', fontSize: 12 }]}>Demo Template</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: '#0369A1', paddingVertical: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }} onPress={importBulkProducts}>
+                  <Upload color="#FFF" size={16} />
+                  <Text style={[font, { color: '#FFF', fontWeight: 'bold', fontSize: 12 }]}>Upload File</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Product Name */}
           <Text style={[font, s.label]}>Product Name *</Text>
           <TextInput style={[font, s.input]} value={name} onChangeText={setName} placeholder="e.g. Organic Broccoli" />
@@ -365,6 +807,15 @@ export default function AdminProducts() {
              <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
                <Star color={isFeatured ? '#F59E0B' : '#9CA3AF'} fill={isFeatured ? '#F59E0B' : 'transparent'} size={20} />
                <Text style={[font, { color: '#111827', fontSize: 14 }]}>{isFeatured ? 'Featured (Shown on Home)' : 'Not Featured'}</Text>
+             </View>
+          </TouchableOpacity>
+
+          {/* Daily Update Toggle */}
+          <Text style={[font, s.label, { marginTop: 16 }]}>Daily Price Update</Text>
+          <TouchableOpacity style={s.dropdown} onPress={() => setIsDailyUpdate(!isDailyUpdate)}>
+             <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+               <CheckCircle color={isDailyUpdate ? '#10B981' : '#9CA3AF'} size={20} />
+               <Text style={[font, { color: '#111827', fontSize: 14 }]}>{isDailyUpdate ? 'Enabled (Included in Daily Excel)' : 'Disabled'}</Text>
              </View>
           </TouchableOpacity>
 
@@ -507,7 +958,14 @@ export default function AdminProducts() {
                     <View style={s.imgPlaceholder}><Text style={{ fontSize: 20 }}>📦</Text></View>
                   )}
                   <View style={s.info}>
-                    <Text style={[font, s.pName]} numberOfLines={1}>{p.name}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={[font, s.pName, { flex: 1 }]} numberOfLines={1}>{p.name}</Text>
+                      {p.isDailyUpdate && (
+                        <View style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={[font, { fontSize: 10, color: '#059669', fontWeight: 'bold' }]}>DAILY</Text>
+                        </View>
+                      )}
+                    </View>
                     {p.status === 'pending' && (
                       <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginBottom: 4 }}>
                         <Text style={[font, { fontSize: 10, color: '#D97706', fontWeight: 'bold' }]}>PENDING APPROVAL</Text>
