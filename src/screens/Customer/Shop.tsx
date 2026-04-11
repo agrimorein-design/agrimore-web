@@ -164,7 +164,7 @@ export default function Shop({ navigation }: any) {
           {filteredProducts.map((p, i) => {
             const disc = Math.round(((p.price - p.discountPrice) / p.price) * 100);
             return (
-              <Pressable key={i} style={[s.card, { marginRight: (i % 3 === 2) ? 0 : '2.7%' }]} onPress={() => navigation.navigate('ProductDetails', { product: p })}>
+              <Pressable key={i} style={s.card} onPress={() => navigation.navigate('ProductDetails', { product: p })}>
                 <View style={s.imgWrap}>
                   <Image source={{ uri: p.images?.[0] || 'https://via.placeholder.com/150' }} style={s.img} />
                   {disc > 0 && (
@@ -304,9 +304,10 @@ const s = StyleSheet.create({
   resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   resultsText: { fontSize: 16, color: '#6B7280', fontWeight: 'bold' },
   sortText: { fontSize: 14, color: '#145A32', fontWeight: '900' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
   card: {
-    width: '31.5%',
+    width: Platform.OS === 'web' ? 140 : '31%',
+    maxWidth: 160,
     backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 6,

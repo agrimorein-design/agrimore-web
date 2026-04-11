@@ -169,7 +169,7 @@ export default function Category({ route, navigation }: any) {
               </View>
             ) : (
               products.map((p, i) => (
-                <Pressable key={p.id} style={[s.card, { marginRight: (i % 3 === 2) ? 0 : '2.7%' }]} onPress={() => navigation.navigate('ProductDetails', { product: p })}>
+                <Pressable key={p.id} style={s.card} onPress={() => navigation.navigate('ProductDetails', { product: p })}>
                   <View style={s.imgWrap}>
                     <Image source={{ uri: p.images?.[0] || 'https://via.placeholder.com/150' }} style={s.img} />
                     <TouchableOpacity style={s.addPlus} onPress={(e) => handleAddToCart(p, e)}>
@@ -232,9 +232,10 @@ const s = StyleSheet.create({
   catHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 },
   catTitle: { fontSize: 22, fontWeight: '900', color: '#145A32' },
   catSub: { fontSize: 14, color: '#9CA3AF', marginBottom: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
   card: {
-    width: '31.5%',
+    width: Platform.OS === 'web' ? 140 : '31%',
+    maxWidth: 160,
     backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 6,

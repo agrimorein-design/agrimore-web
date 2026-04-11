@@ -54,9 +54,16 @@ export default function Checkout({ navigation }: any) {
   const [dbSlots, setDbSlots] = useState<any[]>([]);
   const [config, setConfig] = useState({ deliveryCharge: 30, freeDeliveryMin: 499, minOrder: 100 });
 
-  // Auto Delivery States
   const [orderType, setOrderType] = useState<'One Time' | 'Auto Delivery'>('One Time');
   const [autoFrequency, setAutoFrequency] = useState<'Daily' | 'Weekly'>('Daily');
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
 
   // Coupon States
   const [couponCode, setCouponCode] = useState('');
@@ -179,21 +186,21 @@ export default function Checkout({ navigation }: any) {
 
   const handlePlaceOrder = async () => {
     if (cartTotal < config.minOrder) {
-      Alert.alert('Minimum Order Required', `Please add items worth ₹${config.minOrder - cartTotal} more to place this order.`);
+      showAlert('Minimum Order Required', `Please add items worth ₹${config.minOrder - cartTotal} more to place this order.`);
       return;
     }
     if (!userData?.location || !userData?.defaultAddress) {
-      Alert.alert('Error', 'Invalid delivery address configuration');
+      showAlert('Error', 'Invalid delivery address configuration');
       return;
     }
     if (!selectedSlot) {
-      Alert.alert('Error', 'Please select a delivery slot');
+      showAlert('Error', 'Please select a delivery slot');
       return;
     }
     
     // Check wallet balance
     if (paymentMethod === 'wallet' && (userData?.walletBalance || 0) < total) {
-      Alert.alert('Error', 'Insufficient wallet balance. Please add money or choose another method.');
+      showAlert('Error', 'Insufficient wallet balance. Please add money or choose another method.');
       return;
     }
 
@@ -231,8 +238,7 @@ export default function Checkout({ navigation }: any) {
         }
 
         clearCart();
-        Alert.alert('🎉 Auto-Delivery Set!', `Your subscription has been scheduled ${autoFrequency.toLowerCase()}. Manage it from the portal.`);
-        navigation.reset({ index: 0, routes: [{ name: 'Customer' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'OrderSuccess', params: { orderId: 'AUTO SUB' } }] });
         setLoading(false);
         return; // EXIT here, do not create standard order
       }
@@ -248,7 +254,7 @@ export default function Checkout({ navigation }: any) {
         });
 
         if (!paymentResult.success) {
-          Alert.alert('Payment Failed', paymentResult.error || 'Your payment could not be processed.');
+          showAlert('Payment Failed', paymentResult.error || 'Your payment could not be processed.');
           setLoading(false);
           return; // Stop order placement
         }
@@ -345,10 +351,9 @@ export default function Checkout({ navigation }: any) {
       }
 
       clearCart();
-      Alert.alert('🎉 Order Placed!', 'Your order has been placed successfully. You can track it in the Orders tab.');
-      navigation.reset({ index: 0, routes: [{ name: 'Customer' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'OrderSuccess', params: { orderId } }] });
     } catch (e: any) {
-      Alert.alert('Order Failed', e.message || 'Something went wrong. Please try again.');
+      showAlert('Order Failed', e.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }

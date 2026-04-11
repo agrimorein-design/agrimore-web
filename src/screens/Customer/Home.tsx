@@ -276,6 +276,9 @@ export default function Home({ navigation }: any) {
                 </Text>
               )}
             </View>
+            <TouchableOpacity style={s.addBtn} onPress={(e) => handlePress(e)}>
+              <Text style={[font, s.addBtnText]}>{p.variantsEnabled ? 'OPTS' : 'ADD'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Pressable>
@@ -607,9 +610,10 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: '900', color: '#145A32' },
   seeAll: { color: '#D4A843', fontSize: 13, fontWeight: '700', marginRight: 2 },
   // Grid / Cards
-  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8, marginBottom: 20 },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 10, marginBottom: 20 },
   gridCard: {
-    width: '31%',
+    width: Platform.OS === 'web' ? 140 : '31%',
+    maxWidth: 160,
     backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 6,
@@ -628,9 +632,11 @@ const s = StyleSheet.create({
   badgeText: { color: '#145A32', fontSize: 8, fontWeight: '900' },
   cardInfo: { flex: 1, paddingBottom: 2 },
   cTitle: { fontSize: 10, fontWeight: '800', color: '#1F2937', marginBottom: 4 },
-  priceRow: { flexDirection: 'column', alignItems: 'flex-start', marginTop: 'auto' },
-  cNprice: { fontSize: 12, fontWeight: '900', color: '#145A32' },
-  cOprice: { fontSize: 8, color: '#9CA3AF', textDecorationLine: 'line-through' },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' },
+  cNprice: { fontSize: 13, fontWeight: '900', color: '#145A32' },
+  cOprice: { fontSize: 9, color: '#9CA3AF', textDecorationLine: 'line-through' },
+  addBtn: { backgroundColor: 'rgba(212,168,67,0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  addBtnText: { color: '#D4A843', fontSize: 10, fontWeight: '900' },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#145A32', paddingVertical: 14, borderRadius: 14, marginTop: 4, marginBottom: 24 },
   seeAllBtnText: { color: '#FFF', fontWeight: '900', fontSize: 15, marginRight: 6 },
   

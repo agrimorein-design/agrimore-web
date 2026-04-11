@@ -13,6 +13,7 @@ import ResetPassword from '../screens/Auth/ResetPassword';
 import AddressSetup from '../screens/Customer/AddressSetup';
 import CustomerTabs from './CustomerTabs';
 import Checkout from '../screens/Customer/Checkout';
+import OrderSuccess from '../screens/Customer/OrderSuccess';
 import ProductDetails from '../screens/Customer/ProductDetails';
 
 // New Customer Screens
@@ -169,6 +170,7 @@ export default function MainNavigator() {
             <Stack.Screen name="Customer" component={CustomerTabs} />
             <Stack.Screen name="Orders" component={Orders} />
             <Stack.Screen name="Checkout" component={Checkout} />
+            <Stack.Screen name="OrderSuccess" component={OrderSuccess} />
             <Stack.Screen name="AddressSetup" component={AddressSetup} />
             <Stack.Screen name="ProductDetails" component={ProductDetails} />
             <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetup} />
@@ -195,6 +197,7 @@ export default function MainNavigator() {
             <Stack.Screen name="Customer" component={CustomerTabs} />
             <Stack.Screen name="Orders" component={Orders} />
             <Stack.Screen name="Checkout" component={Checkout} />
+            <Stack.Screen name="OrderSuccess" component={OrderSuccess} />
             <Stack.Screen name="AddressSetup" component={AddressSetup} />
             <Stack.Screen name="ProductDetails" component={ProductDetails} />
             <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetup} />
@@ -225,6 +228,7 @@ export default function MainNavigator() {
             <Stack.Screen name="Customer" component={CustomerTabs} />
             <Stack.Screen name="Orders" component={Orders} />
             <Stack.Screen name="Checkout" component={Checkout} />
+            <Stack.Screen name="OrderSuccess" component={OrderSuccess} />
             <Stack.Screen name="AddressSetup" component={AddressSetup} />
             <Stack.Screen name="ProductDetails" component={ProductDetails} />
             <Stack.Screen name="SubscriptionSetup" component={SubscriptionSetup} />
