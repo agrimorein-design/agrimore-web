@@ -232,9 +232,9 @@ const s = StyleSheet.create({
   catHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 },
   catTitle: { fontSize: 22, fontWeight: '900', color: '#145A32' },
   catSub: { fontSize: 14, color: '#9CA3AF', marginBottom: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-start' },
   card: {
-    width: '31%',
+    width: '30%',
     maxWidth: 160,
     backgroundColor: '#FFF',
     borderRadius: 12,
