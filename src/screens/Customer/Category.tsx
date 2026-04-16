@@ -234,7 +234,7 @@ const s = StyleSheet.create({
   catSub: { fontSize: 14, color: '#9CA3AF', marginBottom: 2 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
   card: {
-    width: Platform.OS === 'web' ? 140 : '31%',
+    width: '31%',
     maxWidth: 160,
     backgroundColor: '#FFF',
     borderRadius: 12,

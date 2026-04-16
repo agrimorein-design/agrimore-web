@@ -612,7 +612,7 @@ const s = StyleSheet.create({
   // Grid / Cards
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 10, marginBottom: 20 },
   gridCard: {
-    width: Platform.OS === 'web' ? 140 : '31%',
+    width: '31%',
     maxWidth: 160,
     backgroundColor: '#FFF',
     borderRadius: 12,

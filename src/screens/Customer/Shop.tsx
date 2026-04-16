@@ -306,7 +306,7 @@ const s = StyleSheet.create({
   sortText: { fontSize: 14, color: '#145A32', fontWeight: '900' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
   card: {
-    width: Platform.OS === 'web' ? 140 : '31%',
+    width: '31%',
     maxWidth: 160,
     backgroundColor: '#FFF',
     borderRadius: 12,
